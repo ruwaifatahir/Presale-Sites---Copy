@@ -1,44 +1,12 @@
-import { useEffect, useState } from "react";
+/* eslint-disable react/prop-types */
+import { useState } from "react";
 import DropdownWrapper from "./Dropdown.style";
-import { chainInfo } from "../../../contracts/chainConfig";
 
-const Dropdown = ({
-  variant,
-  selectedImg,
-  titleText,
-  setIsActiveBuyOnEth,
-  setIsActiveBuyOnBnb,
-  switchChain,
-  makeEmptyInputs,
-  ethChainId,
-  bnbChainId,
-}) => {
-  let dropdownList = chainInfo;
-
-  dropdownList = dropdownList.filter((item) => item.chainId == 97);
-
+const Dropdown = ({ variant }) => {
   const [isDropdownActive, setIsDropdownActive] = useState(false);
 
   const dropdownHandle = () => {
     setIsDropdownActive(!isDropdownActive);
-  };
-
-  const handleDropdownData = (item) => {
-    event.preventDefault();
-
-    setIsDropdownActive(false);
-    if (item.chainId == ethChainId) {
-      setIsActiveBuyOnBnb(false);
-      setIsActiveBuyOnEth(true);
-      switchChain({ chainId: ethChainId });
-      makeEmptyInputs();
-    }
-    if (item.chainId == bnbChainId) {
-      setIsActiveBuyOnEth(false);
-      setIsActiveBuyOnBnb(true);
-      switchChain({ chainId: bnbChainId });
-      makeEmptyInputs();
-    }
   };
 
   return (
@@ -47,21 +15,9 @@ const Dropdown = ({
         className={`dropdown-toggle ${isDropdownActive ? "active" : ""}`}
         onClick={dropdownHandle}
       >
-        <img src={selectedImg} alt="icon" />
-        <span>{titleText}</span>
+        <img src={"/bnb.png"} alt="icon" />
+        <span>Buy on BNB</span>
       </button>
-      {isDropdownActive && (
-        <ul className="dropdown-list">
-          {dropdownList?.map((item, i) => (
-            <li key={i}>
-              <a href="#" onClick={() => handleDropdownData(item)}>
-                <img src={item.icon} alt="icon" />
-                <span>{item.title}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
     </DropdownWrapper>
   );
 };

@@ -1,7 +1,5 @@
 import styled, { css } from "styled-components";
 
-import ChevronDownIcon from "../../../assets/images/icons/chevron-down.svg";
-
 const DropdownWrapper = styled.div`
   position: relative;
 

@@ -37,9 +37,16 @@ const Banner = () => {
           <div className="col-md-12">
             <div className="mb-20 text-center">
               <h1 className="banner-title">
-                {BannerData.title} <br /> {BannerData.title2}
+                {"DIGI TOKEN Presale"} <br /> {"New Era of Blockchain"}
               </h1>
               <p className="banner-subtitle">{BannerData.subtitle}</p>
+
+              <img
+                src={"partnership.svg"}
+                alt="banner"
+                className="partnership-img"
+                style={{ width: "100%", height: "312px" }}
+              />
 
               <div className="presale-card-wrapper">
                 <div className="presale-card">

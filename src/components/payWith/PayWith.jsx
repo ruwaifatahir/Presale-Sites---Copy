@@ -1,112 +1,165 @@
 import PayWithStyleWrapper from "./PayWith.style";
-import StatusIcon from "../../assets/images/icons/status.png";
-import Dropdown from "./Dropdown/Dropdown";
-import { usePresaleData } from "../../utils/PresaleContext";
-import { useReadContract, useWriteContract } from "wagmi";
+import { useReadContract, useWriteContract, useAccount } from "wagmi";
 import { PRESALE_ADDRESS, REFERRAL_ADDRESS } from "../../config/constants";
 import { PRESALE_ABI } from "../../config/presaleAbi";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import PropTypes from "prop-types";
+import { formatEther, parseEther } from "viem";
+
+/**
+ * Deploy staking token
+ * Deploy presale contract (set staking token, deposit staking tokens, set base price, set owner)
+ * Check getTokenPrice response
+ */
 
 const PayWith = ({ variant }) => {
+  const [input, setInput] = useState("");
+
+  const { address, isConnected, chainId: connectedChainId } = useAccount();
+
   const {
-    setIsActiveBuyOnEth,
-    setIsActiveBuyOnBnb,
-    switchChain,
-    selectedImg,
-    payWithText,
-    titleText,
-    bnbChainId,
-    tokenSymbol,
-    paymentAmount,
-    totalAmount,
-    presaleStatus,
-    makeEmptyInputs,
-    handlePaymentInput,
-    userChainId,
-  } = usePresaleData();
+    writeContract,
+    isPending: isWritePending,
+    error: writeError,
+  } = useWriteContract();
 
-  const { writeContract } = useWriteContract({});
-
-  const handleBuyTokens = async () => {
-    await writeContract({
-      address: PRESALE_ADDRESS,
-      abi: PRESALE_ABI,
-      functionName: "buyTokens",
-      args: [paymentAmount, 0, REFERRAL_ADDRESS],
-      chainId: userChainId,
-    });
-  };
-
-  const result = useReadContract({
+  const { data: tokenPriceInWei, isLoading: isPriceLoading } = useReadContract({
     address: PRESALE_ADDRESS,
     abi: PRESALE_ABI,
-    functionName: "baseTokenPrice",
+    functionName: "getCurrentTokenPrice",
     chainId: 97,
     query: {
-      enabled: !!userChainId,
+      enabled: true,
     },
   });
 
-  console.log("result", result);
-  console.log("Contract read error:", result.error);
+  const tokenPriceInBnb = useMemo(() => {
+    if (!tokenPriceInWei) return 0;
+    try {
+      return Number(formatEther(tokenPriceInWei));
+    } catch (e) {
+      console.error("Error formatting token price:", e);
+      return 0;
+    }
+  }, [tokenPriceInWei]);
+
+  const tokensToGet = useMemo(() => {
+    const inputAmount = Number(input);
+    if (
+      isPriceLoading ||
+      !tokenPriceInBnb ||
+      tokenPriceInBnb === 0 ||
+      !input ||
+      isNaN(inputAmount) ||
+      inputAmount <= 0
+    ) {
+      return "0";
+    }
+    const tokens = inputAmount / tokenPriceInBnb;
+    return tokens.toFixed(4);
+  }, [input, tokenPriceInBnb, isPriceLoading]);
+
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    if (/^\d*\.?\d*$/.test(value)) {
+      setInput(value);
+    }
+  };
+
+  const handleBuyTokens = async () => {
+    const inputAmount = Number(input);
+    if (!input || isNaN(inputAmount) || inputAmount <= 0) {
+      console.error("Invalid input amount");
+      return;
+    }
+
+    if (!tokenPriceInBnb) {
+      console.error("Token price not available");
+      return;
+    }
+
+    try {
+      const valueToSend = parseEther(input);
+      console.log(`Attempting to buy with ${input} BNB (${valueToSend} wei)`);
+      console.log(
+        `Wallet connected: ${isConnected}, Address: ${address}, Chain ID: ${connectedChainId}`
+      );
+      console.log(
+        `Write hook state before call: isPending=${isWritePending}, error=${writeError}`
+      );
+
+      await writeContract({
+        address: PRESALE_ADDRESS,
+        abi: PRESALE_ABI,
+        functionName: "buyTokens",
+        args: [parseEther(tokensToGet), 0, REFERRAL_ADDRESS],
+        chainId: 97,
+        value: valueToSend,
+      });
+
+      console.log("Transaction submitted to wallet provider");
+      console.log(
+        `Write hook state after call attempt: isPending=${isWritePending}, error=${writeError}`
+      );
+    } catch (error) {
+      console.error("Error in handleBuyTokens catch block:", error);
+      console.log(
+        `Write hook state in catch block: isPending=${isWritePending}, error=${writeError}`
+      );
+    }
+  };
+
+  const isButtonDisabled =
+    isPriceLoading ||
+    !input ||
+    Number(input) <= 0 ||
+    isWritePending ||
+    !isConnected;
 
   return (
     <PayWithStyleWrapper variant={variant}>
       <div className="pay-with-content">
         <div className="pay-with-content-left">
-          <Dropdown
-            variant="v4"
-            selectedImg={selectedImg}
-            titleText={titleText}
-            setIsActiveBuyOnEth={setIsActiveBuyOnEth}
-            setIsActiveBuyOnBnb={setIsActiveBuyOnBnb}
-            switchChain={switchChain}
-            makeEmptyInputs={makeEmptyInputs}
-            bnbChainId={bnbChainId}
-          />
-        </div>
-
-        <div className="pay-with-content-right">
-          <ul className="pay-with-list">
-            <li>
-              <button className="active">
-                <img src={selectedImg} alt="icon" />
-              </button>
-            </li>
-          </ul>
+          <span>Pay With BNB</span>
         </div>
       </div>
 
-      <form action="/" method="post">
+      <form onSubmit={(e) => e.preventDefault()}>
         <div className="presale-item mb-30">
           <div className="presale-item-inner">
-            <label>Pay token ({payWithText})</label>
+            <label>Pay Amount (BNB)</label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               placeholder="0"
-              value={paymentAmount}
-              onChange={handlePaymentInput}
+              value={input}
+              onChange={handleInputChange}
             />
           </div>
           <div className="presale-item-inner">
-            <label>Get Token ({tokenSymbol})</label>
-            <input type="number" placeholder="0" value={totalAmount} disabled />
+            <label>Get Amount (DIGI)</label>
+            <input
+              type="text"
+              placeholder="0"
+              value={isPriceLoading ? "Loading price..." : tokensToGet}
+              disabled
+            />
           </div>
         </div>
       </form>
 
-      <div className="presale-item-msg">
-        {presaleStatus && (
-          <div className="presale-item-msg__content">
-            <img src={StatusIcon} alt="icon" />
-            <p>{presaleStatus}</p>
-          </div>
-        )}
-      </div>
-
-      <button className="presale-item-btn" onClick={handleBuyTokens}>
-        Buy now
+      <button
+        className="presale-item-btn"
+        onClick={handleBuyTokens}
+        disabled={isButtonDisabled}
+      >
+        {isPriceLoading
+          ? "Loading Price..."
+          : isWritePending
+          ? "Check Wallet..."
+          : !isConnected
+          ? "Connect Wallet"
+          : "Buy now"}
       </button>
     </PayWithStyleWrapper>
   );

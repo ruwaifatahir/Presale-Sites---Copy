@@ -19,6 +19,7 @@ import {
   trustWallet,
   walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
+import PropTypes from "prop-types";
 
 const projectId = "0a125e3a4251eb58c540988c282cdb2d";
 
@@ -76,7 +77,7 @@ const Rainbowkit = ({ children }) => {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
-          initialChain={sepolia}
+          initialChain={bscTestnet}
           modalSize="compact" //wide,compact
           theme={darkTheme({
             accentColor: "rgba(255, 255, 255, 0.2)",
@@ -91,6 +92,10 @@ const Rainbowkit = ({ children }) => {
       </QueryClientProvider>
     </WagmiProvider>
   );
+};
+
+Rainbowkit.propTypes = {
+  children: PropTypes.node.isRequired,
 };
 
 export default Rainbowkit;
