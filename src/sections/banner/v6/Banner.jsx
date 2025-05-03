@@ -7,18 +7,18 @@ import UserDataDisplay from "../../../components/userDataDisplay/UserDataDisplay
 import Slider from "react-slick";
 import BannerData from "../../../assets/data/bannerV6";
 import { usePresaleData } from "../../../utils/PresaleContext";
-import { useAccount } from 'wagmi';
+import { useAccount } from "wagmi";
 
 const Banner = () => {
-  const {
-    currentStage,
-    currentBonus,
-    stageEnd,
-    raisedToken,
-    goalToken,
-    tokenPercent,
-  } = usePresaleData();
+  const { currentStage, currentBonus, raisedToken, goalToken, tokenPercent } =
+    usePresaleData();
   const { isConnected } = useAccount();
+
+  // Calculate the end date for the countdown (30 days from now)
+  // Get current time in seconds, add 30 days worth of seconds
+  const nowInSeconds = Math.floor(Date.now() / 1000);
+  const thirtyDaysInSeconds = 30 * 24 * 60 * 60;
+  const calculatedEndDate = nowInSeconds + thirtyDaysInSeconds;
 
   var settings = {
     dots: false,
@@ -60,7 +60,7 @@ const Banner = () => {
                   </div>
 
                   <div className="presale-card-counter">
-                    <Countdown endDate={stageEnd} font="title2" />
+                    <Countdown endDate={calculatedEndDate} font="title2" />
                   </div>
 
                   <div className="presale-card-body">
