@@ -9,7 +9,13 @@ import { PRESALE_ADDRESS } from "../../config/constants";
 import { PRESALE_ABI } from "../../config/presaleAbi";
 import { useState, useMemo, useEffect } from "react";
 import PropTypes from "prop-types";
-import { formatEther, parseEther, isAddress, formatUnits } from "viem";
+import {
+  formatEther,
+  parseEther,
+  isAddress,
+  formatUnits,
+  parseUnits,
+} from "viem";
 import Dropdown from "./Dropdown/Dropdown"; // Import the refactored Dropdown
 
 /**
@@ -36,6 +42,8 @@ const PayWith = ({ variant }) => {
   const [urlReferralAddress, setUrlReferralAddress] = useState(ZERO_ADDRESS);
   // State for copy button feedback
   const [isLinkCopied, setIsLinkCopied] = useState(false);
+  // State for validation messages
+  const [validationMessage, setValidationMessage] = useState("");
 
   const { address, isConnected } = useAccount();
 
@@ -114,6 +122,28 @@ const PayWith = ({ variant }) => {
       },
     });
 
+  // Fetch Min/Max Stake Amounts
+  const { data: stakeLimitsData, isLoading: isLimitsLoading } =
+    useReadContracts({
+      contracts: [
+        {
+          address: PRESALE_ADDRESS,
+          abi: PRESALE_ABI,
+          functionName: "minStakeAmount",
+          chainId: 97,
+        },
+        {
+          address: PRESALE_ADDRESS,
+          abi: PRESALE_ABI,
+          functionName: "maxStakeAmount",
+          chainId: 97,
+        },
+      ],
+      query: {
+        enabled: true, // Fetch immediately
+      },
+    });
+
   // Process fetched contract data - adjust indices
   const {
     apyRanges,
@@ -144,6 +174,15 @@ const PayWith = ({ variant }) => {
       twoYears: results[7],
     };
   }, [contractData]);
+
+  // Process fetched stake limits
+  const { minStakeAmount, maxStakeAmount } = useMemo(() => {
+    if (!stakeLimitsData) return {};
+    return {
+      minStakeAmount: stakeLimitsData[0]?.result,
+      maxStakeAmount: stakeLimitsData[1]?.result,
+    };
+  }, [stakeLimitsData]);
 
   const tokenPriceInBnb = useMemo(() => {
     if (!tokenPriceInWei) return 0;
@@ -234,6 +273,53 @@ const PayWith = ({ variant }) => {
     isContractDataLoading,
   ]);
 
+  // --- Validation Effect ---
+  useEffect(() => {
+    setValidationMessage(""); // Clear previous message
+    if (
+      !input ||
+      isNaN(Number(input)) ||
+      Number(input) <= 0 ||
+      !tokensToGet ||
+      tokensToGet === "0"
+    ) {
+      return; // No validation needed for empty/zero input
+    }
+
+    if (isLimitsLoading || isPriceLoading) {
+      return; // Wait for limits and price to load
+    }
+
+    if (!minStakeAmount || !maxStakeAmount) {
+      console.error("Stake limits not loaded correctly.");
+      setValidationMessage("Could not verify stake limits.");
+      return;
+    }
+
+    try {
+      // Convert input DIGI amount string to BigInt (assuming 18 decimals)
+      const tokensToGetBigInt = parseUnits(tokensToGet, 18);
+
+      if (tokensToGetBigInt < minStakeAmount) {
+        const minFormatted = formatUnits(minStakeAmount, 18);
+        setValidationMessage(`Minimum stake amount is ${minFormatted} DIGI`);
+      } else if (tokensToGetBigInt > maxStakeAmount) {
+        const maxFormatted = formatUnits(maxStakeAmount, 18);
+        setValidationMessage(`Maximum stake amount is ${maxFormatted} DIGI`);
+      }
+    } catch (e) {
+      console.error("Error parsing/validating input amount:", e);
+      setValidationMessage("Invalid amount entered.");
+    }
+  }, [
+    input,
+    tokensToGet,
+    minStakeAmount,
+    maxStakeAmount,
+    isLimitsLoading,
+    isPriceLoading,
+  ]);
+
   const handleInputChange = (e) => {
     const value = e.target.value;
     if (/^\d*\.?\d*$/.test(value)) {
@@ -303,11 +389,13 @@ const PayWith = ({ variant }) => {
     }
   };
 
-  // Update button disabled logic (remove referral input validation)
+  // --- Button Disabled Logic ---
   const isButtonDisabled =
     isPriceLoading ||
+    isLimitsLoading || // Disable while limits loading
     !input ||
     Number(input) <= 0 ||
+    !!validationMessage || // Disable if there's any validation message
     isWritePending ||
     !isConnected;
 
@@ -394,6 +482,7 @@ const PayWith = ({ variant }) => {
         className="presale-item-btn"
         onClick={handleBuyTokens}
         disabled={isButtonDisabled}
+        style={{ marginBottom: '5px' }}
       >
         {isPriceLoading
           ? "Loading Price..."
@@ -403,6 +492,15 @@ const PayWith = ({ variant }) => {
           ? "Connect Wallet"
           : "Buy now"}
       </button>
+
+      {validationMessage && (
+        <p
+          className="validation-message"
+          style={{ color: 'red', textAlign: 'left', marginTop: '5px', marginBottom: '0', fontSize: '14px' }}
+        >
+          {validationMessage}
+        </p>
+      )}
     </PayWithStyleWrapper>
   );
 };
