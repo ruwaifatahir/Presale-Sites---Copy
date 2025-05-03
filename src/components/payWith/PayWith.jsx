@@ -1,10 +1,15 @@
 import PayWithStyleWrapper from "./PayWith.style";
-import { useReadContract, useWriteContract, useAccount } from "wagmi";
+import {
+  useReadContract,
+  useReadContracts,
+  useWriteContract,
+  useAccount,
+} from "wagmi";
 import { PRESALE_ADDRESS } from "../../config/constants";
 import { PRESALE_ABI } from "../../config/presaleAbi";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import PropTypes from "prop-types";
-import { formatEther, parseEther, isAddress } from "viem";
+import { formatEther, parseEther, isAddress, formatUnits } from "viem";
 import Dropdown from "./Dropdown/Dropdown"; // Import the refactored Dropdown
 
 /**
@@ -12,6 +17,9 @@ import Dropdown from "./Dropdown/Dropdown"; // Import the refactored Dropdown
  * Deploy presale contract (set staking token, deposit staking tokens, set base price, set owner)
  * Check getTokenPrice response
  */
+
+// Define Zero Address
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const LOCK_PERIOD_OPTIONS = [
   { label: "3 Months Lock", value: 0 },
@@ -24,7 +32,10 @@ const PayWith = ({ variant }) => {
   const [selectedLockPeriod, setSelectedLockPeriod] = useState(
     LOCK_PERIOD_OPTIONS[0].value
   );
-  const [referralAddressInput, setReferralAddressInput] = useState("");
+  // State to store the referral address from URL or ZERO_ADDRESS
+  const [urlReferralAddress, setUrlReferralAddress] = useState(ZERO_ADDRESS);
+  // State for copy button feedback
+  const [isLinkCopied, setIsLinkCopied] = useState(false);
 
   const { address, isConnected, chainId: connectedChainId } = useAccount();
 
@@ -44,8 +55,105 @@ const PayWith = ({ variant }) => {
     },
   });
 
-  console.log(tokenPriceInWei);
+  // Fetch necessary contract data for reward calculation
+  const { data: contractData, isLoading: isContractDataLoading } =
+    useReadContracts({
+      contracts: [
+        // Fetch each APY range element individually using the auto-generated getter
+        {
+          address: PRESALE_ADDRESS,
+          abi: PRESALE_ABI,
+          functionName: "apyRanges",
+          args: [0],
+          chainId: 97,
+        }, // Index 0
+        {
+          address: PRESALE_ADDRESS,
+          abi: PRESALE_ABI,
+          functionName: "apyRanges",
+          args: [1],
+          chainId: 97,
+        }, // Index 1
+        {
+          address: PRESALE_ADDRESS,
+          abi: PRESALE_ABI,
+          functionName: "apyRanges",
+          args: [2],
+          chainId: 97,
+        }, // Index 2
+        // Fetch thresholds and durations as before
+        {
+          address: PRESALE_ADDRESS,
+          abi: PRESALE_ABI,
+          functionName: "minThreshold",
+          chainId: 97,
+        },
+        {
+          address: PRESALE_ADDRESS,
+          abi: PRESALE_ABI,
+          functionName: "highThreshold",
+          chainId: 97,
+        },
+        {
+          address: PRESALE_ADDRESS,
+          abi: PRESALE_ABI,
+          functionName: "sixMonths",
+          chainId: 97,
+        },
+        {
+          address: PRESALE_ADDRESS,
+          abi: PRESALE_ABI,
+          functionName: "oneYear",
+          chainId: 97,
+        },
+        {
+          address: PRESALE_ADDRESS,
+          abi: PRESALE_ABI,
+          functionName: "twoYears",
+          chainId: 97,
+        },
+      ],
+      query: {
+        enabled: true,
+      },
+    });
 
+  console.log("contractData", contractData);
+
+  // Process fetched contract data - adjust indices
+  const {
+    apyRanges,
+    minThreshold,
+    highThreshold,
+    sixMonths,
+    oneYear,
+    twoYears,
+  } = useMemo(() => {
+    console.log("Processing contractData:", contractData);
+    if (!contractData || contractData.length < 8) return {}; // Expect 8 results now
+
+    const results = contractData.map((item) => item?.result);
+    const statuses = contractData.map((item) => item?.status);
+
+    // Check if all reads were successful
+    if (statuses.some((status) => status !== "success")) {
+      console.error("Failed to read some contract data:", contractData);
+      return {};
+    }
+
+    // Reconstruct the apyRanges array
+    const reconstructedApyRanges = [results[0], results[1], results[2]];
+    console.log("Reconstructed apyRanges:", reconstructedApyRanges);
+
+    return {
+      apyRanges: reconstructedApyRanges,
+      minThreshold: results[3],
+      highThreshold: results[4],
+      sixMonths: results[5],
+      oneYear: results[6],
+      twoYears: results[7],
+    };
+  }, [contractData]);
 
   const tokenPriceInBnb = useMemo(() => {
     if (!tokenPriceInWei) return 0;
@@ -70,8 +178,90 @@ const PayWith = ({ variant }) => {
       return "0";
     }
     const tokens = inputAmount / tokenPriceInBnb;
-    return tokens.toFixed(4);
+    // Return the value without fixing decimals here, handle formatting later
+    return tokens.toString(); // Keep as string for potential BigInt parsing
   }, [input, tokenPriceInBnb, isPriceLoading]);
+
+  // Calculate estimated total rewards
+  const estimatedTotalRewards = useMemo(() => {
+    console.log("Recalculating rewards...");
+    console.log({
+      apyRanges,
+      minThreshold,
+      highThreshold,
+      sixMonths,
+      oneYear,
+      twoYears,
+      tokensToGet,
+      selectedLockPeriod,
+      isContractDataLoading,
+    });
+
+    // Ensure all data is loaded and valid
+    if (
+      !apyRanges ||
+      !minThreshold ||
+      !highThreshold ||
+      !sixMonths ||
+      !oneYear ||
+      !twoYears ||
+      !tokensToGet ||
+      tokensToGet === "0" ||
+      isContractDataLoading
+    ) {
+      return "0"; // Return 0 if data is missing or tokensToGet is 0
+    }
+
+    try {
+      // Parse tokensToGet (assuming 18 decimals for the token)
+      const tokensToGetBigInt = parseEther(tokensToGet); // Converts string like "123.45" to BigInt
+      console.log("Tokens to Get (BigInt):", tokensToGetBigInt);
+
+      // Determine APY based on thresholds
+      let selectedApy = apyRanges[0]; // Default to lowest APY
+      if (tokensToGetBigInt >= highThreshold) {
+        selectedApy = apyRanges[2];
+      } else if (tokensToGetBigInt >= minThreshold) {
+        selectedApy = apyRanges[1];
+      }
+      console.log("Selected APY:", selectedApy);
+
+      // Determine lock duration based on selection
+      let selectedDuration; // In seconds (BigInt)
+      if (selectedLockPeriod === 0) selectedDuration = sixMonths;
+      else if (selectedLockPeriod === 1) selectedDuration = oneYear;
+      else selectedDuration = twoYears;
+      console.log("Selected Duration (s):", selectedDuration);
+
+      // Constants for calculation
+      const SECONDS_IN_YEAR = BigInt(31536000);
+      const APY_SCALING_FACTOR = BigInt(10000); // APY is stored as value * 10000 (e.g., 1000 for 10%)
+
+      // Calculate reward: (amount * apy * duration) / (secondsInYear * scalingFactor)
+      const totalRewardBigInt =
+        (tokensToGetBigInt * selectedApy * selectedDuration) /
+        (SECONDS_IN_YEAR * APY_SCALING_FACTOR);
+      console.log("Calculated Reward (BigInt):", totalRewardBigInt);
+
+      // Format the reward (assuming reward is in the same token units - 18 decimals)
+      const formattedReward = formatUnits(totalRewardBigInt, 18); // Format back to a readable string
+      console.log("Formatted Reward:", formattedReward);
+      return formattedReward;
+    } catch (error) {
+      console.error("Error calculating estimated rewards:", error);
+      return "Error"; // Indicate calculation error
+    }
+  }, [
+    tokensToGet,
+    selectedLockPeriod,
+    apyRanges,
+    minThreshold,
+    highThreshold,
+    sixMonths,
+    oneYear,
+    twoYears,
+    isContractDataLoading,
+  ]);
 
   const handleInputChange = (e) => {
     const value = e.target.value;
@@ -79,6 +269,19 @@ const PayWith = ({ variant }) => {
       setInput(value);
     }
   };
+
+  // Read referral address from URL on component mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const refAddress = params.get("ref");
+    if (refAddress && isAddress(refAddress)) {
+      console.log("Referral address found in URL:", refAddress);
+      setUrlReferralAddress(refAddress);
+    } else {
+      console.log("No valid referral address in URL, using Zero Address.");
+      setUrlReferralAddress(ZERO_ADDRESS);
+    }
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   const handleBuyTokens = async () => {
     const inputAmount = Number(input);
@@ -92,8 +295,8 @@ const PayWith = ({ variant }) => {
       return;
     }
 
-    // Referral address is now mandatory, validation happens in isButtonDisabled
-    const finalReferralAddress = referralAddressInput;
+    // Use the referral address derived from the URL
+    const finalReferralAddress = urlReferralAddress;
 
     try {
       const valueToSend = parseEther(input);
@@ -110,7 +313,7 @@ const PayWith = ({ variant }) => {
         address: PRESALE_ADDRESS,
         abi: PRESALE_ABI,
         functionName: "buyTokens",
-        // Pass the mandatory referral address directly
+        // Pass the referral address from URL state
         args: [
           parseEther(tokensToGet),
           selectedLockPeriod,
@@ -132,17 +335,32 @@ const PayWith = ({ variant }) => {
     }
   };
 
-  // Button disabled if referral address is empty or invalid
-  const isReferralInvalidOrEmpty =
-    !referralAddressInput || !isAddress(referralAddressInput);
+  // Function to generate and copy referral link
+  const handleGenerateLink = async () => {
+    if (!address) {
+      console.error("Wallet not connected, cannot generate referral link.");
+      return;
+    }
+    const referralLink = `${window.location.origin}${window.location.pathname}?ref=${address}`;
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      console.log("Referral link copied:", referralLink);
+      setIsLinkCopied(true);
+      // Reset button text after a short delay
+      setTimeout(() => setIsLinkCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy referral link: ", err);
+      // Optionally, show an error message to the user
+    }
+  };
 
+  // Update button disabled logic (remove referral input validation)
   const isButtonDisabled =
     isPriceLoading ||
     !input ||
     Number(input) <= 0 ||
     isWritePending ||
-    !isConnected ||
-    isReferralInvalidOrEmpty; // Use the updated check
+    !isConnected;
 
   return (
     <PayWithStyleWrapper variant={variant}>
@@ -169,16 +387,24 @@ const PayWith = ({ variant }) => {
           </div>
         </div>
 
+        {/* Display Estimated Rewards */}
         <div className="presale-item mb-30">
           <div className="presale-item-inner">
-            <label htmlFor="referral-address">Referral Address</label>
+            <label>Est. Total Rewards (BNB)</label>
             <input
-              id="referral-address"
               type="text"
-              placeholder="Enter referral address (0x...)"
-              value={referralAddressInput}
-              onChange={(e) => setReferralAddressInput(e.target.value)}
-              required
+              placeholder="0"
+              // Display calculated rewards, handle loading/error states
+              value={
+                isContractDataLoading || isPriceLoading
+                  ? "Calculating..."
+                  : estimatedTotalRewards === "Error"
+                  ? "Error"
+                  : Number(input) > 0
+                  ? estimatedTotalRewards
+                  : "0"
+              }
+              disabled // This field is display-only
             />
           </div>
         </div>
@@ -194,6 +420,23 @@ const PayWith = ({ variant }) => {
             placeholder="Select Lock Period"
           />
         </div>
+      </div>
+
+      {/* Generate Referral Link Text/Link */}
+      <div className="presale-item presale-item--text-link mb-30">
+        <a
+          href="#"
+          className={`referral-link-generator ${
+            !isConnected || !address ? "disabled" : ""
+          }`}
+          onClick={(e) => {
+            e.preventDefault();
+            if (isConnected && address) handleGenerateLink();
+          }}
+          aria-disabled={!isConnected || !address}
+        >
+          {isLinkCopied ? "Link Copied!" : "Copy Referral Link"}
+        </a>
       </div>
 
       <button
