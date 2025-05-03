@@ -23,7 +23,7 @@ const MobileMenu = ({ mobileMenuHandle }) => {
           </button>
         </div>
 
-        <ul className="mobile-menu-list mb-40">
+        {/* <ul className="mobile-menu-list mb-40">
           {Data?.map((item, i) => (
             <li key={i}>
               <NavLink to={item.url} end>
@@ -31,7 +31,7 @@ const MobileMenu = ({ mobileMenuHandle }) => {
               </NavLink>
             </li>
           ))}
-        </ul>
+        </ul> */}
 
         <ul className="mobile-social-links mb-40">
           <li>

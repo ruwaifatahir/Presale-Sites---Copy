@@ -1,10 +1,11 @@
 import PayWithStyleWrapper from "./PayWith.style";
 import { useReadContract, useWriteContract, useAccount } from "wagmi";
-import { PRESALE_ADDRESS, REFERRAL_ADDRESS } from "../../config/constants";
+import { PRESALE_ADDRESS } from "../../config/constants";
 import { PRESALE_ABI } from "../../config/presaleAbi";
 import { useState, useMemo } from "react";
 import PropTypes from "prop-types";
-import { formatEther, parseEther } from "viem";
+import { formatEther, parseEther, isAddress } from "viem";
+import Dropdown from "./Dropdown/Dropdown"; // Import the refactored Dropdown
 
 /**
  * Deploy staking token
@@ -12,8 +13,18 @@ import { formatEther, parseEther } from "viem";
  * Check getTokenPrice response
  */
 
+const LOCK_PERIOD_OPTIONS = [
+  { label: "3 Months Lock", value: 0 },
+  { label: "6 Months Lock", value: 1 },
+  { label: "12 Months Lock", value: 2 },
+];
+
 const PayWith = ({ variant }) => {
   const [input, setInput] = useState("");
+  const [selectedLockPeriod, setSelectedLockPeriod] = useState(
+    LOCK_PERIOD_OPTIONS[0].value
+  );
+  const [referralAddressInput, setReferralAddressInput] = useState("");
 
   const { address, isConnected, chainId: connectedChainId } = useAccount();
 
@@ -32,6 +43,9 @@ const PayWith = ({ variant }) => {
       enabled: true,
     },
   });
+
+  console.log(tokenPriceInWei);
+
 
   const tokenPriceInBnb = useMemo(() => {
     if (!tokenPriceInWei) return 0;
@@ -78,6 +92,9 @@ const PayWith = ({ variant }) => {
       return;
     }
 
+    // Referral address is now mandatory, validation happens in isButtonDisabled
+    const finalReferralAddress = referralAddressInput;
+
     try {
       const valueToSend = parseEther(input);
       console.log(`Attempting to buy with ${input} BNB (${valueToSend} wei)`);
@@ -87,12 +104,18 @@ const PayWith = ({ variant }) => {
       console.log(
         `Write hook state before call: isPending=${isWritePending}, error=${writeError}`
       );
+      console.log(`Using referral address: ${finalReferralAddress}`);
 
       await writeContract({
         address: PRESALE_ADDRESS,
         abi: PRESALE_ABI,
         functionName: "buyTokens",
-        args: [parseEther(tokensToGet), 0, REFERRAL_ADDRESS],
+        // Pass the mandatory referral address directly
+        args: [
+          parseEther(tokensToGet),
+          selectedLockPeriod,
+          finalReferralAddress,
+        ],
         chainId: 97,
         value: valueToSend,
       });
@@ -109,21 +132,20 @@ const PayWith = ({ variant }) => {
     }
   };
 
+  // Button disabled if referral address is empty or invalid
+  const isReferralInvalidOrEmpty =
+    !referralAddressInput || !isAddress(referralAddressInput);
+
   const isButtonDisabled =
     isPriceLoading ||
     !input ||
     Number(input) <= 0 ||
     isWritePending ||
-    !isConnected;
+    !isConnected ||
+    isReferralInvalidOrEmpty; // Use the updated check
 
   return (
     <PayWithStyleWrapper variant={variant}>
-      <div className="pay-with-content">
-        <div className="pay-with-content-left">
-          <span>Pay With BNB</span>
-        </div>
-      </div>
-
       <form onSubmit={(e) => e.preventDefault()}>
         <div className="presale-item mb-30">
           <div className="presale-item-inner">
@@ -146,7 +168,33 @@ const PayWith = ({ variant }) => {
             />
           </div>
         </div>
+
+        <div className="presale-item mb-30">
+          <div className="presale-item-inner">
+            <label htmlFor="referral-address">Referral Address</label>
+            <input
+              id="referral-address"
+              type="text"
+              placeholder="Enter referral address (0x...)"
+              value={referralAddressInput}
+              onChange={(e) => setReferralAddressInput(e.target.value)}
+              required
+            />
+          </div>
+        </div>
       </form>
+
+      <div className="presale-item mb-30">
+        <div className="presale-item-inner">
+          <label>Select Lock Period</label>
+          <Dropdown
+            options={LOCK_PERIOD_OPTIONS}
+            selectedValue={selectedLockPeriod}
+            onSelect={(value) => setSelectedLockPeriod(value)}
+            placeholder="Select Lock Period"
+          />
+        </div>
+      </div>
 
       <button
         className="presale-item-btn"

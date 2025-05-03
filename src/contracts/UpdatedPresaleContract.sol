@@ -598,30 +598,27 @@ contract PresaleStakingContract is Ownable, ReentrancyGuard {
     }
 
     function buyTokens(uint256 amount, uint8 lockOption, address referrer) external payable nonReentrant {
-        require(amount >= minStakeAmount, "Amount below minimum stake");
-        require(amount <= maxStakeAmount, "Amount exceeds maximum stake");
-        require(lockOption <= 2, "Invalid lock option");
-        require(referrer != msg.sender && referrer != address(0), "Invalid referrer");
-        require(stakingToken.balanceOf(address(this)) >= amount, "Insufficient contract token balance");
+    require(amount >= minStakeAmount, "Amount below minimum stake");
+    require(amount <= maxStakeAmount, "Amount exceeds maximum stake");
+    require(lockOption <= 2, "Invalid lock option");
+    require(referrer != msg.sender, "Cannot refer yourself"); // Allow address(0) for first buyer
+    require(stakingToken.balanceOf(address(this)) >= amount, "Insufficient contract token balance");
 
-        uint256 currentPrice = getCurrentTokenPrice();
-        uint8 decimals = stakingToken.decimals(); // Should be 18
-        uint256 totalCost = currentPrice.mul(amount).div(10**decimals);
-        require(msg.value >= totalCost, "Insufficient BNB: need at least totalCost");
+    uint256 currentPrice = getCurrentTokenPrice();
+    uint8 decimals = stakingToken.decimals(); // Should be 18
+    uint256 totalCost = currentPrice.mul(amount).div(10**decimals);
+    require(msg.value >= totalCost, "Insufficient BNB: need at least totalCost");
 
-        // Refund excess BNB
-        if (msg.value > totalCost) {
-            (bool sent, ) = payable(msg.sender).call{value: msg.value - totalCost}("");
-            require(sent, "BNB refund failed");
-        }
-
-        // Ensure sender has approved token transfer
-        require(stakingToken.allowance(msg.sender, address(this)) >= amount, "Insufficient token allowance");
-        require(stakingToken.transferFrom(msg.sender, address(this), amount), "Token transfer failed");
-
-        _stake(msg.sender, amount, lockOption, referrer);
-        emit TokensPurchased(msg.sender, amount, totalCost);
+    // Refund excess BNB
+    if (msg.value > totalCost) {
+        (bool sent, ) = payable(msg.sender).call{value: msg.value - totalCost}("");
+        require(sent, "BNB refund failed");
     }
+
+    // No need for user to hold or approve tokens; contract stakes tokens directly
+    _stake(msg.sender, amount, lockOption, referrer);
+    emit TokensPurchased(msg.sender, amount, totalCost);
+}
 
     function _stake(address user, uint256 amount, uint8 lockOption, address referrer) internal {
         uint256 lockPeriod;

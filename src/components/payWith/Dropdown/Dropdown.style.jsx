@@ -2,6 +2,7 @@ import styled, { css } from "styled-components";
 
 const DropdownWrapper = styled.div`
   position: relative;
+  width: 100%;
 
   .dropdown-toggle {
     border: 0;
