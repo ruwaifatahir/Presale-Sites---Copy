@@ -37,13 +37,9 @@ const PayWith = ({ variant }) => {
   // State for copy button feedback
   const [isLinkCopied, setIsLinkCopied] = useState(false);
 
-  const { address, isConnected, chainId: connectedChainId } = useAccount();
+  const { address, isConnected } = useAccount();
 
-  const {
-    writeContract,
-    isPending: isWritePending,
-    error: writeError,
-  } = useWriteContract();
+  const { writeContract, isPending: isWritePending } = useWriteContract();
 
   const { data: tokenPriceInWei, isLoading: isPriceLoading } = useReadContract({
     address: PRESALE_ADDRESS,
@@ -118,8 +114,6 @@ const PayWith = ({ variant }) => {
       },
     });
 
-  console.log("contractData", contractData);
-
   // Process fetched contract data - adjust indices
   const {
     apyRanges,
@@ -129,21 +123,17 @@ const PayWith = ({ variant }) => {
     oneYear,
     twoYears,
   } = useMemo(() => {
-    console.log("Processing contractData:", contractData);
-    if (!contractData || contractData.length < 8) return {}; // Expect 8 results now
+    if (!contractData || contractData.length < 8) return {};
 
     const results = contractData.map((item) => item?.result);
     const statuses = contractData.map((item) => item?.status);
 
-    // Check if all reads were successful
     if (statuses.some((status) => status !== "success")) {
       console.error("Failed to read some contract data:", contractData);
       return {};
     }
 
-    // Reconstruct the apyRanges array
     const reconstructedApyRanges = [results[0], results[1], results[2]];
-    console.log("Reconstructed apyRanges:", reconstructedApyRanges);
 
     return {
       apyRanges: reconstructedApyRanges,
@@ -184,20 +174,6 @@ const PayWith = ({ variant }) => {
 
   // Calculate estimated total rewards
   const estimatedTotalRewards = useMemo(() => {
-    console.log("Recalculating rewards...");
-    console.log({
-      apyRanges,
-      minThreshold,
-      highThreshold,
-      sixMonths,
-      oneYear,
-      twoYears,
-      tokensToGet,
-      selectedLockPeriod,
-      isContractDataLoading,
-    });
-
-    // Ensure all data is loaded and valid
     if (
       !apyRanges ||
       !minThreshold ||
@@ -215,7 +191,6 @@ const PayWith = ({ variant }) => {
     try {
       // Parse tokensToGet (assuming 18 decimals for the token)
       const tokensToGetBigInt = parseEther(tokensToGet); // Converts string like "123.45" to BigInt
-      console.log("Tokens to Get (BigInt):", tokensToGetBigInt);
 
       // Determine APY based on thresholds
       let selectedApy = apyRanges[0]; // Default to lowest APY
@@ -224,14 +199,12 @@ const PayWith = ({ variant }) => {
       } else if (tokensToGetBigInt >= minThreshold) {
         selectedApy = apyRanges[1];
       }
-      console.log("Selected APY:", selectedApy);
 
       // Determine lock duration based on selection
       let selectedDuration; // In seconds (BigInt)
       if (selectedLockPeriod === 0) selectedDuration = sixMonths;
       else if (selectedLockPeriod === 1) selectedDuration = oneYear;
       else selectedDuration = twoYears;
-      console.log("Selected Duration (s):", selectedDuration);
 
       // Constants for calculation
       const SECONDS_IN_YEAR = BigInt(31536000);
@@ -241,11 +214,9 @@ const PayWith = ({ variant }) => {
       const totalRewardBigInt =
         (tokensToGetBigInt * selectedApy * selectedDuration) /
         (SECONDS_IN_YEAR * APY_SCALING_FACTOR);
-      console.log("Calculated Reward (BigInt):", totalRewardBigInt);
 
       // Format the reward (assuming reward is in the same token units - 18 decimals)
       const formattedReward = formatUnits(totalRewardBigInt, 18); // Format back to a readable string
-      console.log("Formatted Reward:", formattedReward);
       return formattedReward;
     } catch (error) {
       console.error("Error calculating estimated rewards:", error);
@@ -275,13 +246,11 @@ const PayWith = ({ variant }) => {
     const params = new URLSearchParams(window.location.search);
     const refAddress = params.get("ref");
     if (refAddress && isAddress(refAddress)) {
-      console.log("Referral address found in URL:", refAddress);
       setUrlReferralAddress(refAddress);
     } else {
-      console.log("No valid referral address in URL, using Zero Address.");
       setUrlReferralAddress(ZERO_ADDRESS);
     }
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []);
 
   const handleBuyTokens = async () => {
     const inputAmount = Number(input);
@@ -300,15 +269,6 @@ const PayWith = ({ variant }) => {
 
     try {
       const valueToSend = parseEther(input);
-      console.log(`Attempting to buy with ${input} BNB (${valueToSend} wei)`);
-      console.log(
-        `Wallet connected: ${isConnected}, Address: ${address}, Chain ID: ${connectedChainId}`
-      );
-      console.log(
-        `Write hook state before call: isPending=${isWritePending}, error=${writeError}`
-      );
-      console.log(`Using referral address: ${finalReferralAddress}`);
-
       await writeContract({
         address: PRESALE_ADDRESS,
         abi: PRESALE_ABI,
@@ -322,16 +282,8 @@ const PayWith = ({ variant }) => {
         chainId: 97,
         value: valueToSend,
       });
-
-      console.log("Transaction submitted to wallet provider");
-      console.log(
-        `Write hook state after call attempt: isPending=${isWritePending}, error=${writeError}`
-      );
     } catch (error) {
       console.error("Error in handleBuyTokens catch block:", error);
-      console.log(
-        `Write hook state in catch block: isPending=${isWritePending}, error=${writeError}`
-      );
     }
   };
 
@@ -344,13 +296,10 @@ const PayWith = ({ variant }) => {
     const referralLink = `${window.location.origin}${window.location.pathname}?ref=${address}`;
     try {
       await navigator.clipboard.writeText(referralLink);
-      console.log("Referral link copied:", referralLink);
       setIsLinkCopied(true);
-      // Reset button text after a short delay
       setTimeout(() => setIsLinkCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy referral link: ", err);
-      // Optionally, show an error message to the user
     }
   };
 
@@ -410,6 +359,25 @@ const PayWith = ({ variant }) => {
         </div>
       </form>
 
+      {/* Restore conditional render */}
+      {isConnected && address && (
+        <div className="presale-item presale-item--text-link mb-30">
+          <a
+            href="#"
+            className={`referral-link-generator ${
+              !isConnected || !address ? "disabled" : ""
+            }`}
+            onClick={(e) => {
+              e.preventDefault();
+              if (isConnected && address) handleGenerateLink();
+            }}
+            aria-disabled={!isConnected || !address}
+          >
+            {isLinkCopied ? "Link Copied!" : "Copy Referral Link"}
+          </a>
+        </div>
+      )}
+
       <div className="presale-item mb-30">
         <div className="presale-item-inner">
           <label>Select Lock Period</label>
@@ -420,23 +388,6 @@ const PayWith = ({ variant }) => {
             placeholder="Select Lock Period"
           />
         </div>
-      </div>
-
-      {/* Generate Referral Link Text/Link */}
-      <div className="presale-item presale-item--text-link mb-30">
-        <a
-          href="#"
-          className={`referral-link-generator ${
-            !isConnected || !address ? "disabled" : ""
-          }`}
-          onClick={(e) => {
-            e.preventDefault();
-            if (isConnected && address) handleGenerateLink();
-          }}
-          aria-disabled={!isConnected || !address}
-        >
-          {isLinkCopied ? "Link Copied!" : "Copy Referral Link"}
-        </a>
       </div>
 
       <button

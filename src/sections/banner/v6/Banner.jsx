@@ -3,9 +3,11 @@ import Progressbar from "../../../components/progressbar/Progressbar";
 import Countdown from "../../../components/countdown/Countdown";
 import SliderData from "../../../assets/data/boxSlider";
 import PayWith from "../../../components/payWith/PayWith";
+import UserDataDisplay from "../../../components/userDataDisplay/UserDataDisplay";
 import Slider from "react-slick";
 import BannerData from "../../../assets/data/bannerV6";
 import { usePresaleData } from "../../../utils/PresaleContext";
+import { useAccount } from 'wagmi';
 
 const Banner = () => {
   const {
@@ -16,6 +18,7 @@ const Banner = () => {
     goalToken,
     tokenPercent,
   } = usePresaleData();
+  const { isConnected } = useAccount();
 
   var settings = {
     dots: false,
@@ -61,6 +64,8 @@ const Banner = () => {
                   </div>
 
                   <div className="presale-card-body">
+                    {isConnected && <UserDataDisplay />}
+
                     <div className="mb-1 d-flex align-items-center justify-content-between flex-wrap">
                       <h5 className="fw-600 text-uppercase text-white">
                         Stage {currentStage} : {currentBonus}% Bonus !
