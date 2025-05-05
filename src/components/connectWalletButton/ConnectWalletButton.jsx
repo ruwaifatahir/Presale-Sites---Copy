@@ -9,6 +9,7 @@ import { useAccount } from "wagmi";
 import { FiChevronDown } from "react-icons/fi";
 import { FaPlus } from "react-icons/fa6";
 import IconImg1 from "../../assets/images/icons/wallet.svg";
+import PropTypes from "prop-types";
 
 const ConnectWalletButton = ({ variant }) => {
   const { openConnectModal } = useConnectModal();
@@ -31,7 +32,7 @@ const ConnectWalletButton = ({ variant }) => {
       setShortWalletAddress(first2 + "..." + last2);
     }
 
-     if (isConnected && !chain && !chainModalOpen) {
+    if (isConnected && !chain && !chainModalOpen) {
       openChainModal();
     }
   }, [isConnected, addressData, chain, chainModalOpen]);
@@ -40,7 +41,7 @@ const ConnectWalletButton = ({ variant }) => {
     <ConnectWalletButtonStyleWrapper variant={variant}>
       {openConnectModal && variant != "v7" && (
         <button className="connect-wallet-btn" onClick={openConnectModal}>
-          Connect <span >Wallet</span>
+          Connect <span>Wallet</span>
         </button>
       )}
 
@@ -56,10 +57,7 @@ const ConnectWalletButton = ({ variant }) => {
       )}
 
       {openAccountModal && variant != "v7" && (
-        <button
-          className="connect-wallet-btn"
-          onClick={openAccountModal}
-        >
+        <button className="connect-wallet-btn" onClick={openAccountModal}>
           <span>{walletAddress}</span>
           <span className="short-address">{shortWalletAddress}</span>
           <FiChevronDown />
@@ -80,6 +78,10 @@ const ConnectWalletButton = ({ variant }) => {
       )}
     </ConnectWalletButtonStyleWrapper>
   );
+};
+
+ConnectWalletButton.propTypes = {
+  variant: PropTypes.string,
 };
 
 export default ConnectWalletButton;

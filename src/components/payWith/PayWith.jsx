@@ -404,13 +404,12 @@ const PayWith = ({ variant }) => {
 
   // --- Button Disabled Logic ---
   const isButtonDisabled =
-    isPriceLoading ||
-    isLimitsLoading || // Disable while limits loading
+    isPriceLoading || // Conditions relevant ONLY when buying
+    isLimitsLoading ||
     !input ||
     Number(input) <= 0 ||
-    !!validationMessage || // Disable if there's any validation message
-    isWritePending ||
-    !isConnected;
+    !!validationMessage ||
+    isWritePending;
 
   return (
     <PayWithStyleWrapper variant={variant}>
@@ -523,7 +522,7 @@ const PayWith = ({ variant }) => {
         <button
           className="presale-item-btn"
           onClick={handleMainButtonClick}
-          disabled={isButtonDisabled}
+          disabled={isConnected ? isButtonDisabled : false}
           style={{ flex: 1, margin: 0 }} // Use flex: 1 to share space
         >
           {isPriceLoading
