@@ -19,7 +19,6 @@ import {
   trustWallet,
   walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
-import PropTypes from "prop-types";
 
 const projectId = "0a125e3a4251eb58c540988c282cdb2d";
 
@@ -94,8 +93,6 @@ const Rainbowkit = ({ children }) => {
   );
 };
 
-Rainbowkit.propTypes = {
-  children: PropTypes.node.isRequired,
-};
+
 
 export default Rainbowkit;
