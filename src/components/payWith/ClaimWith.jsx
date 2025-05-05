@@ -50,13 +50,13 @@ const ClaimWith = ({ variant }) => {
 
   return (
     <div>
-      <PayWithStyleWrapper variant={variant}>
-        <h5
+       {/* <h5
           className="  fw-600 text-white text-uppercase text-center"
           style={{ paddingBottom: "20px" }}
         >
           ⚡ Buy early to get the best rate!
-        </h5>
+        </h5> */}
+      <PayWithStyleWrapper variant={variant}>
         <button
           className="presale-item-btn presale-item-btn--secondary"
           disabled={isClaimButtonDisabled}
