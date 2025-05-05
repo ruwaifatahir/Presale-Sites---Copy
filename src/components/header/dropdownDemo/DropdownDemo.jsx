@@ -2,6 +2,7 @@ import DropdownDemoStyles from "./DropdownDemo.style";
 import Data from "../../../assets/data/demoMenuList";
 import MenuGridIcon from "../../../assets/images/icons/menu-grid.svg";
 import whitepaperPdf from "../../../assets/pdf/whitepaper.pdf";
+import { NavLink } from "react-router-dom";
 
 const DropdownDemo = ({ className, variant }) => {
   return (
@@ -30,6 +31,23 @@ const DropdownDemo = ({ className, variant }) => {
           >
             {"Whitepaper"}
           </a>
+        </li>
+
+        <li>
+          {location.pathname !== "/claim" && (
+            <NavLink
+              to="/claim"
+              className="claim-link-style"
+              style={{
+                marginRight: "15px",
+                color: "#fff",
+                textDecoration: "none",
+                fontWeight: "bold",
+              }}
+            >
+              Claim
+            </NavLink>
+          )}
         </li>
       </ul>
     </DropdownDemoStyles>
