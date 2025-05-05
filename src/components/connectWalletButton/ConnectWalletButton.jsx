@@ -40,7 +40,7 @@ const ConnectWalletButton = ({ variant }) => {
     <ConnectWalletButtonStyleWrapper variant={variant}>
       {openConnectModal && variant != "v7" && (
         <button className="connect-wallet-btn" onClick={openConnectModal}>
-          Connect <span>Wallet</span>
+          Connect <span >Wallet</span>
         </button>
       )}
 

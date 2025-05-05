@@ -44,12 +44,14 @@ const Banner = () => {
               </h1>
               <p className="banner-subtitle">{BannerData.subtitle}</p>
 
-              <img
-                src={"partnership.svg"}
-                alt="banner"
-                className="partnership-img"
-                style={{ width: "100%", height: "312px" }}
-              />
+              <div style={{display: 'flex', flexDirection: 'column', }}>
+                  <a href={"https://www.cyberscope.io/audits/dgfl"} target="_blank" className="kyc">
+                    <img
+                    src="partnership.svg "                   // alt="Audit & KYC"
+                    style={{ marginTop: "-2rem" }} className="kycImage"
+                  /></a>
+                 
+                </div>
 
               <div className="presale-card-wrapper">
                 <div className="presale-card">

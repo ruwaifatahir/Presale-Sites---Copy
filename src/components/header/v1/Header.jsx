@@ -135,11 +135,11 @@ const Header = ({ variant }) => {
                 </ul>
 
                 {/* Add Claim NavLink here, conditionally rendered */}
-                {location.pathname !== '/claim' && (
-                  <NavLink to="/claim" className="claim-link-style" style={{ marginRight: '15px', color: '#fff', textDecoration: 'none', fontWeight: 'bold' }}>
-                    Claim
-                  </NavLink>
-                )}
+                    {/* {location.pathname !== '/claim' && (
+                      <NavLink to="/claim" className="claim-link-style" style={{ marginRight: '15px', color: '#fff', textDecoration: 'none', fontWeight: 'bold' }}>
+                        Claim
+                      </NavLink>
+                    )} */}
 
                 {variant === "v1" && <ConnectWalletButton />}
                 {variant === "v2" && <ConnectWalletButton variant="v2" />}

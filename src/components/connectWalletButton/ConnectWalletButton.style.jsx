@@ -80,16 +80,19 @@ const ConnectWalletButtonStyleWrapper = styled.div`
         }
       }
     `}
+  // here
 
+  
     ${({ variant }) =>
     variant === "v6" &&
     css`
       .connect-wallet-btn {
-        background: linear-gradient(90deg, #3c38ff 0%, #7838ff 100%);
-        color: ${({ theme }) => theme.colors.white};
+        background: linear-gradient(90deg, #00af69 0%, #00ff6a 100%);
+
+        color: ${({ theme }) => theme.colors.black};  
 
         &:hover {
-          background: linear-gradient(90deg, #3c38ff 0%, #7838ff 100%);
+           background: linear-gradient(90deg, #1dff96 0%, #bcff7b 100%);
         }
       }
     `}
@@ -169,19 +172,19 @@ const ConnectWalletButtonStyleWrapper = styled.div`
         }
       `}
   }
+ @media screen and (max-width: 767px) {
+        .connect-wallet-btn {
+          padding: 7px 16px;
 
-  @media screen and (max-width: 767px) {
-    .connect-wallet-btn {
-      padding: 10px 20px;
-      min-width: auto;
-      span {
-        display: none;
+          min-width: auto;
+          span {
+            display: none;            
+          }
+          .short-address {
+            display: block;
+          }
+        }
       }
-      .short-address {
-        display: block;
-      }
-    }
-  }
 `;
 
 export default ConnectWalletButtonStyleWrapper;
