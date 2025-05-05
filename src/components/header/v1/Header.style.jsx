@@ -18,9 +18,6 @@ const HeaderWrapper = styled.div`
     align-items: center;
     justify-content: space-between;
   }
-  .gittu-header-logo img {
-    max-width: 13rem;
-  }
 
   .gittu-header-left {
     display: flex;
@@ -119,11 +116,7 @@ const HeaderWrapper = styled.div`
       flex: 0 0 auto;
       max-width: 100px;
     }
-    .gittu-header-logo img {
-      max-width: 11rem;
-      margin-left: -1rem;
-    }
-      
+
     .dropdown-demo {
       display: none;
     }

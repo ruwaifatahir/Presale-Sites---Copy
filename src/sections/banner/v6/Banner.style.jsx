@@ -9,6 +9,8 @@ const BannerWrapper = styled.section`
   background-position: center center;
   background-size: cover;
   min-height: 100vh;
+
+  
   padding: 223px 0 60px 0;
   position: relative;
   z-index: 0;

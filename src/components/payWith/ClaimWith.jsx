@@ -49,16 +49,24 @@ const ClaimWith = ({ variant }) => {
   };
 
   return (
-    <PayWithStyleWrapper variant={variant}>
-      <button
-        className="presale-item-btn presale-item-btn--secondary"
-        disabled={isClaimButtonDisabled}
-        onClick={handleClaimReferrals}
-        style={{ flex: 1, margin: 0 }}
-      >
-        {isClaimPending ? "Claiming..." : "Claim Referrals"}
-      </button>
-    </PayWithStyleWrapper>
+    <div>
+      <PayWithStyleWrapper variant={variant}>
+        <h5
+          className="  fw-600 text-white text-uppercase text-center"
+          style={{ paddingBottom: "20px" }}
+        >
+          ⚡ Buy early to get the best rate!
+        </h5>
+        <button
+          className="presale-item-btn presale-item-btn--secondary"
+          disabled={isClaimButtonDisabled}
+          onClick={handleClaimReferrals}
+          style={{ flex: 1, margin: 0 }}
+        >
+          {isClaimPending ? "Claiming..." : "Claim Referrals"}
+        </button>
+      </PayWithStyleWrapper>
+    </div>
   );
 };
 
