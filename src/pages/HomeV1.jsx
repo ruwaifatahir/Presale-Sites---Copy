@@ -4,7 +4,7 @@ import Banner from "../sections/banner/v6/Banner";
 
 const HomeV1 = () => {
   return (
-    <Layout pageTitle="Gittu - Home One">
+    <Layout pageTitle="DigiToken - Home">
       <Header variant="v6" />
       <Banner />
     </Layout>

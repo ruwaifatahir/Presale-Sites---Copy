@@ -1,31 +1,21 @@
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import { Helmet, HelmetProvider } from "react-helmet-async";
-import { usePresaleData } from "./utils/PresaleContext";
 
 const Layout = ({ pageTitle, children }) => {
-  const { makeEmptyInputs } = usePresaleData();
-  const location = useLocation();
-
-  useEffect(() => {
-    makeEmptyInputs();
-  }, [location.pathname]);
-
   return (
     <HelmetProvider>
       <Helmet>
         {/* title tag */}
-        {pageTitle ? <title>{pageTitle}</title> : <title>Gittu</title>}
+        {pageTitle ? <title>{pageTitle}</title> : <title>DigiToken</title>}
 
         {/* favicon included here  */}
-        <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+        <link rel="shortcut icon" href="/favicon.png" type="image/x-icon" />
 
         {/* apple touch icon included here */}
-        <link rel="apple-touch-icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
 
         {/* All font family included here */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link rel="preconnect" href="https://fonts.gstatic.com"  />
         {/* Inter font family */}
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
@@ -52,8 +42,6 @@ const Layout = ({ pageTitle, children }) => {
           rel="stylesheet"
         />
       </Helmet>
-
-      {/* page content */}
       {children}
     </HelmetProvider>
   );

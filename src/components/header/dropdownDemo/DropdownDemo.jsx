@@ -1,7 +1,7 @@
-import { NavLink } from "react-router-dom";
 import DropdownDemoStyles from "./DropdownDemo.style";
 import Data from "../../../assets/data/demoMenuList";
 import MenuGridIcon from "../../../assets/images/icons/menu-grid.svg";
+import whitepaperPdf from "../../../assets/pdf/whitepaper.pdf";
 
 const DropdownDemo = ({ className, variant }) => {
   return (
@@ -10,13 +10,27 @@ const DropdownDemo = ({ className, variant }) => {
         <img src={MenuGridIcon} alt="menu" />
       </button>
       <ul className="dropdown-demo-list">
-        {Data?.map((item, i) => (
-          <li key={i}>
-            <NavLink to={item.url} end>
-              {item.title}
-            </NavLink>
-          </li>
-        ))}
+        <li>
+          <a href={"https://digifolios.com"} end>
+            Digifolio Website
+          </a>
+        </li>
+        <li>
+          <a
+            style={{ cursor: "pointer" }}
+            onClick={() => {
+              const link = document.createElement("a");
+              link.href = whitepaperPdf; // Path to your PDF file
+              link.setAttribute("download", "whitepaper.pdf"); // Name of the downloaded file
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            }}
+            rel="noreferrer"
+          >
+            {"Whitepaper"}
+          </a>
+        </li>
       </ul>
     </DropdownDemoStyles>
   );

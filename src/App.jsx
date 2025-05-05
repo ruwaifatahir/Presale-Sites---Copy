@@ -1,15 +1,17 @@
-import { HashRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import ScrollToTop from "./ScrollToTop";
 import HomeV1 from "./pages/HomeV1";
+import Claim from "./pages/Claim";
 
 const App = () => {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<HomeV1 />} />
+        <Route path="/claim" element={<Claim />} />
       </Routes>
-    </HashRouter>
+    </BrowserRouter>
   );
 };
 

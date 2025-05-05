@@ -47,16 +47,7 @@ const PayWith = ({ variant }) => {
 
   const { address, isConnected } = useAccount();
   // Separate write hook for claim, or manage pending state carefully if using one
-  const {
-    writeContract,
-    isPending: isWritePending,
-    reset: resetBuy,
-  } = useWriteContract();
-  const {
-    writeContractAsync: claimRefRewards,
-    isPending: isClaimWritePending,
-    reset: resetClaim,
-  } = useWriteContract();
+  const { writeContract, isPending: isWritePending } = useWriteContract();
 
   const { data: tokenPriceInWei, isLoading: isPriceLoading } = useReadContract({
     address: PRESALE_ADDRESS,
@@ -152,24 +143,6 @@ const PayWith = ({ variant }) => {
         enabled: true, // Fetch immediately
       },
     });
-
-  // Fetch Claimable Referral Rewards (needed for button state)
-  const {
-    data: claimableRefRewardsData,
-    isLoading: isRefRewardsLoading,
-    refetch: refetchRefRewards, // Add refetch function
-  } = useReadContract({
-    address: PRESALE_ADDRESS,
-    abi: PRESALE_ABI,
-    functionName: "stakingReferralRewards",
-    args: [address],
-    chainId: 97,
-    query: {
-      enabled: !!address,
-      // Fetch periodically or after claim
-      refetchInterval: 15000, // e.g., every 15 seconds
-    },
-  });
 
   // Process fetched contract data - adjust indices
   const {
@@ -366,8 +339,6 @@ const PayWith = ({ variant }) => {
   }, []);
 
   const handleBuyTokens = async () => {
-    // Reset claim state in case it was pending
-    resetClaim();
     const inputAmount = Number(input);
     if (!input || isNaN(inputAmount) || inputAmount <= 0) {
       console.error("Invalid input amount");
@@ -404,32 +375,6 @@ const PayWith = ({ variant }) => {
     }
   };
 
-  // --- Handle Claim Referral Rewards ---
-  const handleClaimReferralRewards = async () => {
-    if (!claimableRefRewardsData || claimableRefRewardsData <= 0n) {
-      console.log("No referral rewards to claim.");
-      return;
-    }
-    // Reset buy state in case it was pending
-    resetBuy();
-    try {
-      console.log("Attempting to claim referral rewards...");
-      await claimRefRewards({
-        address: PRESALE_ADDRESS,
-        abi: PRESALE_ABI,
-        functionName: "withdrawStakingReferralRewards",
-        args: [], // No arguments
-        chainId: 97,
-      });
-      console.log("Claim referral rewards transaction submitted.");
-      setTimeout(() => refetchRefRewards(), 1000);
-    } catch (error) {
-      console.error("Failed to claim referral rewards:", error);
-    } finally {
-      // No need for setIsClaimPending(false);
-    }
-  };
-
   // Function to generate and copy referral link
   const handleGenerateLink = async () => {
     if (!address) {
@@ -455,14 +400,6 @@ const PayWith = ({ variant }) => {
     !!validationMessage || // Disable if there's any validation message
     isWritePending ||
     !isConnected;
-
-  const isClaimButtonDisabled =
-    !isConnected ||
-    !address ||
-    isRefRewardsLoading ||
-    !claimableRefRewardsData ||
-    claimableRefRewardsData <= 0n || // No rewards to claim
-    isClaimWritePending; // Claim transaction pending
 
   return (
     <PayWithStyleWrapper variant={variant}>
@@ -562,16 +499,6 @@ const PayWith = ({ variant }) => {
             : !isConnected
             ? "Connect Wallet"
             : "Buy now"}
-        </button>
-
-        {/* Claim Referral Rewards Button */}
-        <button
-          className="presale-item-btn presale-item-btn--secondary" // Add a modifier class for styling
-          onClick={handleClaimReferralRewards}
-          disabled={isClaimButtonDisabled}
-          style={{ flex: 1, margin: 0 }} // Use flex: 1 to share space
-        >
-          {isClaimWritePending ? "Claiming..." : "Claim Referrals"}
         </button>
       </div>
 

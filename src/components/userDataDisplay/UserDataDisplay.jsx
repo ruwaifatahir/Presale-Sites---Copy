@@ -4,23 +4,17 @@ import {
   useBalance,
   useReadContract,
   useReadContracts,
-  useWriteContract,
 } from "wagmi";
 import { formatEther, formatUnits } from "viem";
 import { PRESALE_ADDRESS } from "../../config/constants"; // Adjust path if needed
 import { PRESALE_ABI } from "../../config/presaleAbi"; // Adjust path if needed
 import UserDataDisplayStyleWrapper from "./UserDataDisplay.style";
 
-// Define WEEK constant (must match contract's WEEK = 30 seconds for calculation)
-const WEEK_SECONDS = 30n;
 
 const UserDataDisplay = () => {
   const { address, isConnected, chainId } = useAccount();
-  const [pendingClaimIndex, setPendingClaimIndex] = useState(-1);
   // State for current timestamp (needed for claim eligibility check)
-  const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
-  // State for stakes list visibility
-  const [isStakesVisible, setIsStakesVisible] = useState(false);
+  const [, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
 
   // Update current time periodically for eligibility checks
   useEffect(() => {
@@ -108,8 +102,7 @@ const UserDataDisplay = () => {
       },
     });
 
-  // Add write hook for claiming individual stake rewards
-  const { writeContractAsync: claimStakeReward, reset: resetStakeClaim } = useWriteContract();
+
 
   // 5. Process and Format Data
   const processedData = useMemo(() => {
@@ -177,45 +170,12 @@ const UserDataDisplay = () => {
     return null;
   }
 
-  // --- Handle Claiming Stake Reward ---
-  const handleClaimStakeReward = async (stakeIndex) => {
-    if (pendingClaimIndex !== -1) return; // Prevent multiple claims at once
-    setPendingClaimIndex(stakeIndex);
-    try {
-      console.log(`Attempting to claim rewards for stake index: ${stakeIndex}`);
-      await claimStakeReward({
-        address: PRESALE_ADDRESS,
-        abi: PRESALE_ABI,
-        functionName: 'claimRewards',
-        args: [stakeIndex],
-        chainId: 97,
-      });
-      console.log(`Claim transaction submitted for stake index: ${stakeIndex}`);
-      // Note: rewardsData should update automatically if useReadContracts has defaults
-      // or via a refetch mechanism if configured.
-      resetStakeClaim(); // Reset hook state
-    } catch (error) {
-      console.error(`Failed to claim rewards for stake index ${stakeIndex}:`, error);
-      // Add user feedback
-      resetStakeClaim(); 
-    } finally {
-      setPendingClaimIndex(-1); // Always reset pending index
-    }
-  };
 
-  // Helper to format timestamps (optional)
-  const formatDate = (timestamp) => {
-      if (!timestamp || timestamp === 0n) return 'N/A';
-      return new Date(Number(timestamp) * 1000).toLocaleDateString();
-  }
 
-  // --- Toggle Stakes Visibility ---
-  const toggleStakesVisibility = () => {
-      setIsStakesVisible(prev => !prev);
-  };
+
 
   return (
-    <UserDataDisplayStyleWrapper isStakesVisible={isStakesVisible}>
+    <UserDataDisplayStyleWrapper>
       {/* <h4>Your Stats</h4> */}
       {isLoading ? (
         <p className="loading-text">Loading your data...</p>
@@ -233,95 +193,12 @@ const UserDataDisplay = () => {
               {processedData.formattedTotalStaked} DIGI
             </span>
           </div>
-          <div className="data-row">
-            <span className="data-label">Claimable Rewards:</span>
-            <span className="data-value">
-              {processedData.formattedTotalRewards}{" "}
-              {balanceData?.symbol || "BNB"}
-            </span>
-          </div>
-          {/* Add Direct Referrals Row */}
-          <div className="data-row">
-            <span className="data-label">Direct Referrals:</span>
-            <span className="data-value">
-              {processedData.directReferralsCount}
-            </span>
-          </div>
-          {/* Add Claimable Referral Rewards Row */}
-          <div className="data-row">
-            <span className="data-label">Referral Rewards (BNB):</span>
-            <span className="data-value">
-              {processedData.claimableRefRewardsBNB}{" "}
-              {balanceData?.symbol || "BNB"}
-            </span>
-          </div>
+
           {/* Optional: Add more details about individual stakes here if needed */}
           {processedData.activeStakeCount === 0 && userStakesData && (
             <p className="no-stakes-text">You have no active stakes yet.</p>
           )}
         </>
-      )}
-
-      {/* --- Individual Stakes Section (Collapsible) --- */}
-      <h5 className="stakes-title collapsible-trigger" onClick={toggleStakesVisibility}>
-          Your Stakes
-          <span className="collapse-icon">{/* Icon handled by CSS */}</span>
-      </h5>
-      
-      {/* Conditionally render the list */}
-      {isStakesVisible && (
-          <> 
-          {isLoading ? (
-            <p className="loading-text">Loading stakes...</p>
-          ) : (
-            <div className="stakes-list">
-             {userStakesData && userStakesData.length > 0 ? (
-                userStakesData.map((stake, index) => {
-                  // Only display active (non-withdrawn) stakes
-                  if (stake.withdrawn) return null;
-
-                  // Get rewards for this specific stake (rewardsData corresponds to rewardCalculationContracts)
-                  // Find the reward data index matching the stake index
-                  const rewardContractIndex = rewardCalculationContracts.findIndex(contract => 
-                      contract.functionName === 'calculateRewards' && contract.args[1] === index
-                  );
-                  const stakeRewardResult = rewardsData?.[rewardContractIndex];
-                  const claimableForStake = (stakeRewardResult?.status === 'success' && stakeRewardResult.result) ? stakeRewardResult.result : 0n;
-                  const formattedClaimableForStake = formatEther(claimableForStake);
-
-                  // Eligibility checks based on contract logic
-                  const canClaimWeekly = BigInt(currentTime) >= stake.lastClaimTime + WEEK_SECONDS;
-                  const isLockPeriodActive = BigInt(currentTime) <= stake.stakingStartTime + stake.lockPeriod;
-                  const hasRewards = claimableForStake > 0n;
-                  const isClaimable = canClaimWeekly && isLockPeriodActive && hasRewards;
-
-                  return (
-                    <div key={index} className="stake-item">
-                      <div className="stake-details">
-                        <span>Stake {index + 1}: {formatUnits(stake.amount, 18)} DIGI</span>
-                        <span>Ends: {formatDate(stake.stakingStartTime + stake.lockPeriod)}</span>
-                        <span>Claimable: {formattedClaimableForStake} BNB</span>
-                      </div>
-                      <button
-                        className="claim-button"
-                        onClick={() => handleClaimStakeReward(index)}
-                        disabled={!isClaimable || pendingClaimIndex === index || pendingClaimIndex !== -1}
-                      >
-                        {pendingClaimIndex === index ? "Claiming..." : "Claim"}
-                      </button>
-                    </div>
-                  );
-                })
-              ) : (
-                 <p className="no-stakes-text">You have no active stakes yet.</p>
-              )}
-              {/* Show message if all stakes are withdrawn */}
-              {userStakesData && userStakesData.length > 0 && userStakesData.every(s => s.withdrawn) && (
-                 <p className="no-stakes-text">All your previous stakes have been withdrawn.</p>
-              )}
-            </div>
-          )}
-         </>
       )}
     </UserDataDisplayStyleWrapper>
   );
