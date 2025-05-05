@@ -27,7 +27,7 @@ const Banner = () => {
       <div className="mb-20  ">
         <div className="row">
           <div className="col-md-12">
-            <div className="mb-20 text-center " style={{margin:'14px'}}>
+            <div className="mb-20 text-center " style={{ margin: "14px" }}>
               <h1 className="banner-title">
                 {"DIGI TOKEN Presale"} <br /> {"New Era of Blockchain"}
               </h1>
@@ -35,9 +35,14 @@ const Banner = () => {
 
               <div className="presale-card-wrapper">
                 <div className="presale-card">
+                  <h5
+                    className="  fw-600 text-white text-uppercase text-center"
+                    style={{  position:"relative" , top: "26px"}}
+                  >
+                    ⚡ Buy early to get the best rate!
+                  </h5>
                   <div className="presale-card-body">
                     <UserDataDisplayClaim />
-
                     <ClaimWith variant="v6" />
                   </div>
                 </div>
