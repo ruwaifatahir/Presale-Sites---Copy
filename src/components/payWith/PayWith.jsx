@@ -275,6 +275,56 @@ const PayWith = ({ variant }) => {
     isContractDataLoading,
   ]);
 
+  // Calculate estimated weekly rewards
+  const estimatedWeeklyRewards = useMemo(() => {
+    if (
+      !apyRanges ||
+      !minThreshold ||
+      !highThreshold ||
+      !tokensToGet ||
+      tokensToGet === "0" ||
+      isContractDataLoading
+    ) {
+      return "0"; // Return 0 if data is missing or tokensToGet is 0
+    }
+
+    try {
+      // Constants matching the contract (using BigInt for precision)
+      const WEEK_DURATION = BigInt(30); // Contract defines WEEK as 30 seconds
+      const SECONDS_IN_YEAR = BigInt(31536000); // 60 * 24 * 365
+      const APY_SCALING_FACTOR = BigInt(10000);
+
+      // Parse tokensToGet (assuming 18 decimals for the token)
+      const tokensToGetBigInt = parseEther(tokensToGet);
+
+      // Determine APY based on thresholds
+      let selectedApy = apyRanges[0]; // Default to lowest APY
+      if (tokensToGetBigInt >= highThreshold) {
+        selectedApy = apyRanges[2];
+      } else if (tokensToGetBigInt >= minThreshold) {
+        selectedApy = apyRanges[1];
+      }
+
+      // Calculate weekly reward: (amount * apy * WEEK_DURATION) / (secondsInYear * scalingFactor)
+      const weeklyRewardBigInt =
+        (tokensToGetBigInt * selectedApy * WEEK_DURATION) /
+        (SECONDS_IN_YEAR * APY_SCALING_FACTOR);
+
+      // Format the reward (assuming reward is in BNB - 18 decimals)
+      const formattedReward = formatUnits(weeklyRewardBigInt, 18);
+      return formattedReward;
+    } catch (error) {
+      console.error("Error calculating estimated weekly rewards:", error);
+      return "Error"; // Indicate calculation error
+    }
+  }, [
+    tokensToGet,
+    apyRanges,
+    minThreshold,
+    highThreshold,
+    isContractDataLoading,
+  ]);
+
   // --- Validation Effect ---
   useEffect(() => {
     setValidationMessage(""); // Clear previous message
@@ -432,6 +482,27 @@ const PayWith = ({ variant }) => {
               placeholder="0"
               value={isPriceLoading ? "Loading price..." : tokensToGet}
               disabled
+            />
+          </div>
+        </div>
+
+        {/* Display Estimated Weekly Rewards */}
+        <div className="presale-item mb-30">
+          <div className="presale-item-inner">
+            <label>Est. Weekly Rewards (BNB)</label>
+            <input
+              type="text"
+              placeholder="0"
+              value={
+                isContractDataLoading || isPriceLoading
+                  ? "Calculating..."
+                  : estimatedWeeklyRewards === "Error"
+                  ? "Error"
+                  : Number(input) > 0
+                  ? estimatedWeeklyRewards
+                  : "0"
+              }
+              disabled // This field is display-only
             />
           </div>
         </div>
