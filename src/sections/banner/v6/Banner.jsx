@@ -44,14 +44,19 @@ const Banner = () => {
               </h1>
               <p className="banner-subtitle">{BannerData.subtitle}</p>
 
-              <div style={{display: 'flex', flexDirection: 'column', }}>
-                  <a href={"https://www.cyberscope.io/audits/dgfl"} target="_blank" className="kyc">
-                    <img
-                    src="partnership.svg "                   // alt="Audit & KYC"
-                    style={{ marginTop: "-2rem" }} className="kycImage"
-                  /></a>
-                 
-                </div>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <a
+                  href={"https://www.cyberscope.io/audits/dgfl"}
+                  target="_blank"
+                  className="kyc"
+                >
+                  <img
+                    src="partnership.svg " // alt="Audit & KYC"
+                    style={{ marginTop: "-2rem" }}
+                    className="kycImage"
+                  />
+                </a>
+              </div>
 
               <div className="presale-card-wrapper">
                 <div className="presale-card">
@@ -67,15 +72,6 @@ const Banner = () => {
 
                   <div className="presale-card-body">
                     {isConnected && <UserDataDisplay />}
-
-                    <div className="mb-1 d-flex align-items-center justify-content-between flex-wrap">
-                      <h5 className="fw-600 text-uppercase text-white">
-                        Stage {currentStage} : {currentBonus}% Bonus !
-                      </h5>
-                      <h5 className="fw-600 text-uppercase text-white">
-                        {raisedToken} / {goalToken}
-                      </h5>
-                    </div>
 
                     <div className="mb-35">
                       <Progressbar done={tokenPercent} variant="green2" />
