@@ -1,5 +1,6 @@
 import PayWithStyleWrapper from "./PayWith.style";
 import { useReadContract, useAccount, useWriteContract } from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { PRESALE_ADDRESS } from "../../config/constants";
 import { PRESALE_ABI } from "../../config/presaleAbi";
 import PropTypes from "prop-types";
@@ -13,6 +14,7 @@ import PropTypes from "prop-types";
 const ClaimWith = ({ variant }) => {
   const { address, isConnected } = useAccount();
   const { writeContract, isPending: isClaimPending } = useWriteContract();
+  const { openConnectModal } = useConnectModal();
 
   // Fetch Claimable Referral Rewards (needed for button state)
   const { data: claimableRefRewardsData, isLoading: isRefRewardsLoading } =
@@ -48,6 +50,14 @@ const ClaimWith = ({ variant }) => {
     }
   };
 
+  const handleClaimButtonClick = () => {
+    if (!isConnected) {
+      openConnectModal?.();
+    } else {
+      handleClaimReferrals();
+    }
+  };
+
   return (
     <div>
       <PayWithStyleWrapper variant={variant}>
@@ -59,11 +69,15 @@ const ClaimWith = ({ variant }) => {
         </h5>
         <button
           className="presale-item-btn presale-item-btn--secondary"
-          disabled={isClaimButtonDisabled}
-          onClick={handleClaimReferrals}
+          disabled={isConnected ? isClaimButtonDisabled : false}
+          onClick={handleClaimButtonClick}
           style={{ flex: 1, margin: 0 }}
         >
-          {isClaimPending ? "Claiming..." : "Claim Referrals"}
+          {!isConnected
+            ? "Connect Wallet"
+            : isClaimPending
+            ? "Claiming..."
+            : "Claim Referrals"}
         </button>
       </PayWithStyleWrapper>
     </div>

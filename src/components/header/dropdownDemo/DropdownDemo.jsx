@@ -34,7 +34,7 @@ const DropdownDemo = ({ className, variant }) => {
         </li>
 
         <li>
-          {location.pathname !== "/claim" && (
+          {location.pathname !== "/claim" ? (
             <NavLink
               to="/claim"
               className="claim-link-style"
@@ -46,6 +46,19 @@ const DropdownDemo = ({ className, variant }) => {
               }}
             >
               Claim
+            </NavLink>
+          ) : (
+            <NavLink
+              to="/"
+              className="claim-link-style"
+              style={{
+                marginRight: "15px",
+                color: "#fff",
+                textDecoration: "none",
+                fontWeight: "bold",
+              }}
+            >
+              Home
             </NavLink>
           )}
         </li>
