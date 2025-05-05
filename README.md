@@ -1,8 +1,8 @@
 # Gittu - ICO/IDO/IGO Token Presale Template With Smart Contract (React JS+Solidity)
 
-# Getting Started with React App
+# Getting Started with React App  
 
-## Available Scripts
+## Available Scripts 
 
 In the project directory, you can run:
 
