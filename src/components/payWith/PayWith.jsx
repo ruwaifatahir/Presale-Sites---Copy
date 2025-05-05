@@ -5,6 +5,7 @@ import {
   useWriteContract,
   useAccount,
 } from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { PRESALE_ADDRESS } from "../../config/constants";
 import { PRESALE_ABI } from "../../config/presaleAbi";
 import { useState, useMemo, useEffect } from "react";
@@ -48,6 +49,7 @@ const PayWith = ({ variant }) => {
   const { address, isConnected } = useAccount();
   // Separate write hook for claim, or manage pending state carefully if using one
   const { writeContract, isPending: isWritePending } = useWriteContract();
+  const { openConnectModal } = useConnectModal();
 
   const { data: tokenPriceInWei, isLoading: isPriceLoading } = useReadContract({
     address: PRESALE_ADDRESS,
@@ -391,6 +393,15 @@ const PayWith = ({ variant }) => {
     }
   };
 
+  // Determine the correct action for the main button click
+  const handleMainButtonClick = () => {
+    if (!isConnected) {
+      openConnectModal?.(); // Use optional chaining just in case
+    } else {
+      handleBuyTokens();
+    }
+  };
+
   // --- Button Disabled Logic ---
   const isButtonDisabled =
     isPriceLoading ||
@@ -449,22 +460,45 @@ const PayWith = ({ variant }) => {
         </div>
       </form>
 
-      {/* Restore conditional render */}
+      {/* Updated Referral Link UI */}
       {isConnected && address && (
-        <div className="presale-item presale-item--text-link mb-30">
-          <a
-            href="#"
-            className={`referral-link-generator ${
-              !isConnected || !address ? "disabled" : ""
-            }`}
-            onClick={(e) => {
-              e.preventDefault();
-              if (isConnected && address) handleGenerateLink();
-            }}
-            aria-disabled={!isConnected || !address}
-          >
-            {isLinkCopied ? "Link Copied!" : "Copy Referral Link"}
-          </a>
+        <div className="presale-item mb-30">
+          {/* Outer container for label + input/button group */}
+          <div className="presale-item-inner">
+            <label>Your Referral Link</label>
+            {/* Flex container for input and button */}
+            <div
+              className="referral-link-container"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                width: "100%",
+              }}
+            >
+              <input
+                type="text"
+                value={`${window.location.origin}${window.location.pathname}?ref=${address}`}
+                disabled
+                style={{
+                  flexGrow: 1,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+                readOnly
+                className="referral-link-input"
+              />
+              <button
+                onClick={handleGenerateLink} // Reuse the copy logic handler
+                className="presale-item-btn copy-button" // Use the button style, keep copy-button for potential specific tweaks
+                type="button" // Prevent form submission if accidentally nested
+                style={{ width: "30%" }} // Set fixed width to 40%
+              >
+                {isLinkCopied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -488,7 +522,7 @@ const PayWith = ({ variant }) => {
         {/* Buy Now Button */}
         <button
           className="presale-item-btn"
-          onClick={handleBuyTokens}
+          onClick={handleMainButtonClick}
           disabled={isButtonDisabled}
           style={{ flex: 1, margin: 0 }} // Use flex: 1 to share space
         >
