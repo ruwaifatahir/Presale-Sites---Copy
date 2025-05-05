@@ -568,6 +568,21 @@ const PayWith = ({ variant }) => {
                 {isLinkCopied ? "Copied!" : "Copy"}
               </button>
             </div>
+            {/* Referral Info Text */}
+            <p
+              className="referral-info-text"
+              style={{
+                fontSize: "13px",
+                color: "rgba(255, 255, 255, 0.7)", // Slightly transparent white
+                marginTop: "10px",
+                marginBottom: "0",
+                textAlign: "left",
+                lineHeight: "1.4",
+              }}
+            >
+              Share your link! Earn 10% BNB rewards from the staking rewards
+              claimed by your direct referrals.
+            </p>
           </div>
         </div>
       )}
