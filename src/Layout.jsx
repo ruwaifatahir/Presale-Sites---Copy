@@ -3,7 +3,7 @@ import { Helmet, HelmetProvider } from "react-helmet-async";
 const Layout = ({ pageTitle, children }) => {
   return (
     <HelmetProvider>
-      <Helmet>
+      <Helmet> 
         {/* title tag */}
         {pageTitle ? <title>{pageTitle}</title> : <title>DigiToken</title>}
 
