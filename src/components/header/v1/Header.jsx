@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import HeaderWrapper from "./Header.style";
 import ConnectWalletButton from "../../connectWalletButton/ConnectWalletButton";
 import DropdownDemo from "../dropdownDemo/DropdownDemo";
 import MobileMenu from "../mobileMenu/MobileMenu";
+import PropTypes from "prop-types";
 
 import Logo from "/assets/images/logo-3.png";
 import Logo4 from "/assets/images/logo-4.png";
@@ -21,6 +22,7 @@ import Whitepaper from "/assets/pdf/whitepaper.pdf";
 const Header = ({ variant }) => {
   const [, setLogoImg] = useState(Logo);
   const [isMobileMenu, setIsMobileMenu] = useState(false);
+  const location = useLocation();
 
   const handleMobileMenu = () => {
     setIsMobileMenu(!isMobileMenu);
@@ -132,6 +134,13 @@ const Header = ({ variant }) => {
                   </li>
                 </ul>
 
+                {/* Add Claim NavLink here, conditionally rendered */}
+                {location.pathname !== '/claim' && (
+                  <NavLink to="/claim" className="claim-link-style" style={{ marginRight: '15px', color: '#fff', textDecoration: 'none', fontWeight: 'bold' }}>
+                    Claim
+                  </NavLink>
+                )}
+
                 {variant === "v1" && <ConnectWalletButton />}
                 {variant === "v2" && <ConnectWalletButton variant="v2" />}
                 {variant === "v3" && <ConnectWalletButton variant="yellow" />}
@@ -149,6 +158,10 @@ const Header = ({ variant }) => {
       {isMobileMenu && <MobileMenu mobileMenuHandle={handleMobileMenu} />}
     </>
   );
+};
+
+Header.propTypes = {
+  variant: PropTypes.string,
 };
 
 export default Header;
