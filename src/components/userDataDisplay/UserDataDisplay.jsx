@@ -10,7 +10,6 @@ import { PRESALE_ADDRESS } from "../../config/constants"; // Adjust path if need
 import { PRESALE_ABI } from "../../config/presaleAbi"; // Adjust path if needed
 import UserDataDisplayStyleWrapper from "./UserDataDisplay.style";
 
-
 const UserDataDisplay = () => {
   const { address, isConnected, chainId } = useAccount();
   // State for current timestamp (needed for claim eligibility check)
@@ -39,7 +38,7 @@ const UserDataDisplay = () => {
     abi: PRESALE_ABI,
     functionName: "getUserStakes",
     args: [address],
-    chainId: 97, // Ensure this matches your contract deployment chain
+    chainId: 56, // Ensure this matches your contract deployment chain
     query: {
       enabled: !!address, // Only fetch if address is available
       select: (data) => data || [], // Ensure result is always an array
@@ -60,7 +59,7 @@ const UserDataDisplay = () => {
               abi: PRESALE_ABI,
               functionName: "calculateRewards",
               args: [address, index],
-              chainId: 97,
+              chainId: 56,
             }
           : null
       )
@@ -82,7 +81,7 @@ const UserDataDisplay = () => {
       abi: PRESALE_ABI,
       functionName: "getStakingReferrals",
       args: [address],
-      chainId: 97,
+      chainId: 56,
       query: {
         enabled: !!address,
         select: (data) => data || [], // Ensure result is always an array
@@ -96,13 +95,11 @@ const UserDataDisplay = () => {
       abi: PRESALE_ABI,
       functionName: "stakingReferralRewards",
       args: [address],
-      chainId: 97,
+      chainId: 56,
       query: {
         enabled: !!address,
       },
     });
-
-
 
   // 5. Process and Format Data
   const processedData = useMemo(() => {
@@ -169,10 +166,6 @@ const UserDataDisplay = () => {
   if (!isConnected || !address) {
     return null;
   }
-
-
-
-
 
   return (
     <UserDataDisplayStyleWrapper>

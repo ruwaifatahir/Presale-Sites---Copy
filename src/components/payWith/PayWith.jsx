@@ -55,7 +55,7 @@ const PayWith = ({ variant }) => {
     address: PRESALE_ADDRESS,
     abi: PRESALE_ABI,
     functionName: "getCurrentTokenPrice",
-    chainId: 97,
+    chainId: 56,
     query: {
       enabled: true,
     },
@@ -71,52 +71,52 @@ const PayWith = ({ variant }) => {
           abi: PRESALE_ABI,
           functionName: "apyRanges",
           args: [0],
-          chainId: 97,
+          chainId: 56,
         }, // Index 0
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "apyRanges",
           args: [1],
-          chainId: 97,
+          chainId: 56,
         }, // Index 1
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "apyRanges",
           args: [2],
-          chainId: 97,
+          chainId: 56,
         }, // Index 2
         // Fetch thresholds and durations as before
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "minThreshold",
-          chainId: 97,
+          chainId: 56,
         },
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "highThreshold",
-          chainId: 97,
+          chainId: 56,
         },
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "sixMonths",
-          chainId: 97,
+          chainId: 56,
         },
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "oneYear",
-          chainId: 97,
+          chainId: 56,
         },
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "twoYears",
-          chainId: 97,
+          chainId: 56,
         },
       ],
       query: {
@@ -132,13 +132,13 @@ const PayWith = ({ variant }) => {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "minStakeAmount",
-          chainId: 97,
+          chainId: 56,
         },
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "maxStakeAmount",
-          chainId: 97,
+          chainId: 56,
         },
       ],
       query: {
@@ -417,7 +417,7 @@ const PayWith = ({ variant }) => {
           selectedLockPeriod,
           finalReferralAddress,
         ],
-        chainId: 97,
+        chainId: 56,
         value: valueToSend,
       });
     } catch (error) {
@@ -533,7 +533,7 @@ const PayWith = ({ variant }) => {
       {/* Updated Referral Link UI */}
       {isConnected && address && (
         <div className="presale-item mb-30">
-          {/* Outer container for label + input/button group */}
+          {/* Outer container afor label + input/button group */}
           <div className="presale-item-inner">
             <label>Your Referral Link</label>
             {/* Flex container for input and button */}

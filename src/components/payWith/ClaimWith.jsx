@@ -23,7 +23,7 @@ const ClaimWith = ({ variant }) => {
       abi: PRESALE_ABI,
       functionName: "stakingReferralRewards",
       args: [address],
-      chainId: 97,
+      chainId: 56,
       query: {
         enabled: !!address,
         refetchInterval: 15000, // e.g., every 15 seconds
@@ -45,7 +45,7 @@ const ClaimWith = ({ variant }) => {
         abi: PRESALE_ABI,
         functionName: "withdrawStakingReferralRewards",
         args: [],
-        chainId: 97,
+        chainId: 56,
       });
     }
   };
@@ -60,7 +60,7 @@ const ClaimWith = ({ variant }) => {
 
   return (
     <div>
-       {/* <h5
+      {/* <h5
           className="  fw-600 text-white text-uppercase text-center"
           style={{ paddingBottom: "20px" }}
         >

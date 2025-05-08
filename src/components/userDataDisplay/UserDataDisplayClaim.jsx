@@ -45,7 +45,7 @@ const UserDataDisplayClaim = () => {
     abi: PRESALE_ABI,
     functionName: "getUserStakes",
     args: [address],
-    chainId: 97, // Ensure this matches your contract deployment chain
+    chainId: 56, // Ensure this matches your contract deployment chain
     query: {
       enabled: !!address, // Only fetch if address is available
       select: (data) => data || [], // Ensure result is always an array
@@ -66,7 +66,7 @@ const UserDataDisplayClaim = () => {
               abi: PRESALE_ABI,
               functionName: "calculateRewards",
               args: [address, index],
-              chainId: 97,
+              chainId: 56,
             }
           : null
       )
@@ -88,7 +88,7 @@ const UserDataDisplayClaim = () => {
       abi: PRESALE_ABI,
       functionName: "getStakingReferrals",
       args: [address],
-      chainId: 97,
+      chainId: 56,
       query: {
         enabled: !!address,
         select: (data) => data || [], // Ensure result is always an array
@@ -102,7 +102,7 @@ const UserDataDisplayClaim = () => {
       abi: PRESALE_ABI,
       functionName: "stakingReferralRewards",
       args: [address],
-      chainId: 97,
+      chainId: 56,
       query: {
         enabled: !!address,
       },
@@ -189,7 +189,7 @@ const UserDataDisplayClaim = () => {
         abi: PRESALE_ABI,
         functionName: "claimRewards",
         args: [stakeIndex],
-        chainId: 97,
+        chainId: 56,
       });
       console.log(`Claim transaction submitted for stake index: ${stakeIndex}`);
       // Note: rewardsData should update automatically if useReadContracts has defaults

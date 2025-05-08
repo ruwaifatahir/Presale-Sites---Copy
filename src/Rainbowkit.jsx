@@ -6,7 +6,7 @@ import {
   RainbowKitProvider,
 } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
-import { sepolia, bscTestnet } from "wagmi/chains";
+import { sepolia, bscTestnet, bsc } from "wagmi/chains";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import {
   argentWallet,
@@ -54,6 +54,7 @@ const config = getDefaultConfig({
   appName: "My RainbowKit App",
   projectId: projectId,
   chains: [
+    bsc,
     sepolia,
     bscTestnet,
     // mainnet,
@@ -76,7 +77,7 @@ const Rainbowkit = ({ children }) => {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
-          initialChain={bscTestnet}
+          initialChain={bsc}
           modalSize="compact" //wide,compact
           theme={darkTheme({
             accentColor: "rgba(255, 255, 255, 0.2)",
