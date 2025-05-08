@@ -186,11 +186,6 @@ const UserDataDisplay = () => {
               {processedData.formattedTotalStaked} DIGI
             </span>
           </div>
-
-          {/* Optional: Add more details about individual stakes here if needed */}
-          {processedData.activeStakeCount === 0 && userStakesData && (
-            <p className="no-stakes-text">You have no active stakes yet.</p>
-          )}
         </>
       )}
     </UserDataDisplayStyleWrapper>
