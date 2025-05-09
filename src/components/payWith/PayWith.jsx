@@ -248,17 +248,20 @@ const PayWith = ({ variant }) => {
       else selectedDuration = twoYears;
 
       // Constants for calculation
-      const SECONDS_IN_YEAR = BigInt(31536000);
-      const APY_SCALING_FACTOR = BigInt(10000); // APY is stored as value * 10000 (e.g., 1000 for 10%)
+      const SECONDS_IN_YEAR = BigInt(31536000); // 365 days * 24 hours * 60 minutes * 60 seconds
+      const APY_SCALING_FACTOR = BigInt(10000); // APY is stored as value * 100 (e.g., 1000 for 10%)
 
-      // Calculate reward: (amount * apy * duration) / (secondsInYear * scalingFactor)
+      // Calculate total rewards for the entire lock period
+      // Formula: (tokenAmount * APY * lockPeriod) / (secondsInYear * APY_SCALING_FACTOR)
       const totalRewardBigInt =
         (tokensToGetBigInt * selectedApy * selectedDuration) /
         (SECONDS_IN_YEAR * APY_SCALING_FACTOR);
 
-      // Format the reward (assuming reward is in the same token units - 18 decimals)
-      const formattedReward = formatUnits(totalRewardBigInt, 18); // Format back to a readable string
-      return formattedReward;
+      // Convert to a more reasonable number by formatting with 18 decimals
+      const formattedReward = formatEther(totalRewardBigInt);
+      
+      // Return with fixed decimal places for better readability
+      return Number(formattedReward).toFixed(6);
     } catch (error) {
       console.error("Error calculating estimated rewards:", error);
       return "Error"; // Indicate calculation error
@@ -289,11 +292,6 @@ const PayWith = ({ variant }) => {
     }
 
     try {
-      // Constants matching the contract (using BigInt for precision)
-      const WEEK_DURATION = BigInt(30); // Contract defines WEEK as 30 seconds
-      const SECONDS_IN_YEAR = BigInt(31536000); // 60 * 24 * 365
-      const APY_SCALING_FACTOR = BigInt(10000);
-
       // Parse tokensToGet (assuming 18 decimals for the token)
       const tokensToGetBigInt = parseEther(tokensToGet);
 
@@ -305,14 +303,25 @@ const PayWith = ({ variant }) => {
         selectedApy = apyRanges[1];
       }
 
+      // Constants for calculation
+      // Use the actual values from the contract instead of standard time values
+
+      
+      // For weekly rewards calculation, use the contract's WEEK constant (30 seconds)
+      const WEEK_DURATION = BigInt(30); // Match the contract's WEEK constant
+      const SECONDS_IN_YEAR = BigInt(31536000); // 365 days * 24 hours * 60 minutes * 60 seconds
+      const APY_SCALING_FACTOR = BigInt(10000);
+
       // Calculate weekly reward: (amount * apy * WEEK_DURATION) / (secondsInYear * scalingFactor)
       const weeklyRewardBigInt =
         (tokensToGetBigInt * selectedApy * WEEK_DURATION) /
         (SECONDS_IN_YEAR * APY_SCALING_FACTOR);
 
       // Format the reward (assuming reward is in BNB - 18 decimals)
-      const formattedReward = formatUnits(weeklyRewardBigInt, 18);
-      return formattedReward;
+      const formattedReward = formatEther(weeklyRewardBigInt);
+      
+      // Return with fixed decimal places for better readability
+      return Number(formattedReward).toFixed(6);
     } catch (error) {
       console.error("Error calculating estimated weekly rewards:", error);
       return "Error"; // Indicate calculation error
