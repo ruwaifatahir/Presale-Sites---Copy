@@ -29,9 +29,9 @@ import Dropdown from "./Dropdown/Dropdown"; // Import the refactored Dropdown
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const LOCK_PERIOD_OPTIONS = [
-  { label: "3 Months Lock", value: 0 },
-  { label: "6 Months Lock", value: 1 },
-  { label: "12 Months Lock", value: 2 },
+  { label: "6 Months Lock", value: 0 },
+  { label: "12 Months Lock", value: 1 },
+  { label: "24 Months Lock", value: 2 },
 ];
 
 const PayWith = ({ variant }) => {
@@ -234,11 +234,11 @@ const PayWith = ({ variant }) => {
       const tokensToGetBigInt = parseEther(tokensToGet); // Converts string like "123.45" to BigInt
 
       // Determine APY based on thresholds
-      let selectedApy = apyRanges[0]; // Default to lowest APY
+      let selectedApy = apyRanges[0]; // Default to lowest APY (80%)
       if (tokensToGetBigInt >= highThreshold) {
-        selectedApy = apyRanges[2];
+        selectedApy = apyRanges[2]; // Highest APY (120%)
       } else if (tokensToGetBigInt >= minThreshold) {
-        selectedApy = apyRanges[1];
+        selectedApy = apyRanges[1]; // Medium APY (100%)
       }
 
       // Determine lock duration based on selection
@@ -247,15 +247,17 @@ const PayWith = ({ variant }) => {
       else if (selectedLockPeriod === 1) selectedDuration = oneYear;
       else selectedDuration = twoYears;
 
-      // Constants for calculation
-      const SECONDS_IN_YEAR = BigInt(31536000); // 365 days * 24 hours * 60 minutes * 60 seconds
-      const APY_SCALING_FACTOR = BigInt(10000); // APY is stored as value * 100 (e.g., 1000 for 10%)
-
-      // Calculate total rewards for the entire lock period
-      // Formula: (tokenAmount * APY * lockPeriod) / (secondsInYear * APY_SCALING_FACTOR)
+      // Get the input amount in BNB
+      const bnbAmount = parseEther(input || "0");
+      
+      // Constants for calculation - use the actual values from the contract
+      const APY_SCALING_FACTOR = BigInt(10000); // APY is stored in basis points (e.g., 8000 for 80%)
+      
+      // Calculate total rewards for the entire lock period in BNB
+      // Formula: (bnbAmount * APY * lockPeriod) / (oneYear * APY_SCALING_FACTOR)
       const totalRewardBigInt =
-        (tokensToGetBigInt * selectedApy * selectedDuration) /
-        (SECONDS_IN_YEAR * APY_SCALING_FACTOR);
+        (bnbAmount * selectedApy * selectedDuration) /
+        (oneYear * APY_SCALING_FACTOR);
 
       // Convert to a more reasonable number by formatting with 18 decimals
       const formattedReward = formatEther(totalRewardBigInt);
@@ -268,6 +270,7 @@ const PayWith = ({ variant }) => {
     }
   }, [
     tokensToGet,
+    input,
     selectedLockPeriod,
     apyRanges,
     minThreshold,
@@ -296,26 +299,24 @@ const PayWith = ({ variant }) => {
       const tokensToGetBigInt = parseEther(tokensToGet);
 
       // Determine APY based on thresholds
-      let selectedApy = apyRanges[0]; // Default to lowest APY
+      let selectedApy = apyRanges[0]; // Default to lowest APY (80%)
       if (tokensToGetBigInt >= highThreshold) {
-        selectedApy = apyRanges[2];
+        selectedApy = apyRanges[2]; // Highest APY (120%)
       } else if (tokensToGetBigInt >= minThreshold) {
-        selectedApy = apyRanges[1];
+        selectedApy = apyRanges[1]; // Medium APY (100%)
       }
 
-      // Constants for calculation
-      // Use the actual values from the contract instead of standard time values
-
+      // Get the input amount in BNB
+      const bnbAmount = parseEther(input || "0");
       
-      // For weekly rewards calculation, use the contract's WEEK constant (30 seconds)
-      const WEEK_DURATION = BigInt(30); // Match the contract's WEEK constant
-      const SECONDS_IN_YEAR = BigInt(31536000); // 365 days * 24 hours * 60 minutes * 60 seconds
-      const APY_SCALING_FACTOR = BigInt(10000);
-
-      // Calculate weekly reward: (amount * apy * WEEK_DURATION) / (secondsInYear * scalingFactor)
+      // Constants for calculation - use the actual values from the contract
+      const WEEK_DURATION = BigInt(604800); // 1 week in seconds
+      const APY_SCALING_FACTOR = BigInt(10000); // APY is stored in basis points
+      
+      // Calculate weekly reward in BNB: (bnbAmount * apy * WEEK_DURATION) / (oneYear * scalingFactor)
       const weeklyRewardBigInt =
-        (tokensToGetBigInt * selectedApy * WEEK_DURATION) /
-        (SECONDS_IN_YEAR * APY_SCALING_FACTOR);
+        (bnbAmount * selectedApy * WEEK_DURATION) /
+        (oneYear * APY_SCALING_FACTOR);
 
       // Format the reward (assuming reward is in BNB - 18 decimals)
       const formattedReward = formatEther(weeklyRewardBigInt);
@@ -328,9 +329,11 @@ const PayWith = ({ variant }) => {
     }
   }, [
     tokensToGet,
+    input,
     apyRanges,
     minThreshold,
     highThreshold,
+    oneYear,
     isContractDataLoading,
   ]);
 
