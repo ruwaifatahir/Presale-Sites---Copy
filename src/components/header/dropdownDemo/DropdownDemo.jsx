@@ -19,14 +19,16 @@ const DropdownDemo = ({ className, variant }) => {
         <li>
           <a
             style={{ cursor: "pointer" }}
-            onClick={() => {
-              const link = document.createElement("a");
-              link.href = whitepaperPdf; // Path to your PDF file
-              link.setAttribute("download", "whitepaper.pdf"); // Name of the downloaded file
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-            }}
+            href="https://digifolios.com/whitepaper.pdf"
+            target="_blank"
+            // onClick={() => {
+            //   const link = document.createElement("a");
+            //   link.href = whitepaperPdf; // Path to your PDF file
+            //   link.setAttribute("download", "whitepaper.pdf"); // Name of the downloaded file
+            //   document.body.appendChild(link);
+            //   link.click();
+            //   document.body.removeChild(link);
+            // }}
             rel="noreferrer"
           >
             {"Whitepaper"}

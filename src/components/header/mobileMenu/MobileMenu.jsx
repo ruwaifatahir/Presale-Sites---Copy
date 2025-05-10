@@ -117,7 +117,11 @@ const MobileMenu = ({ mobileMenuHandle }) => {
 
         <ul className="mobile-menu-list mb-40">
           <li>
-            <a href={Whitepaper} target="_blank" rel="noreferrer">
+            <a
+              href="https://digifolios.com/whitepaper.pdf"
+              target="_blank"
+              rel="noreferrer"
+            >
               Whitepaper
             </a>
           </li>
