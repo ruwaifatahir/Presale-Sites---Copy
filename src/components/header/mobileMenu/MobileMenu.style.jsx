@@ -57,7 +57,9 @@ const MobileMenuWrapper = styled.div`
 
   .mobile-logo {
     img {
-      max-width: 100px;
+      max-width: 144px;
+
+     
     }
   }
 

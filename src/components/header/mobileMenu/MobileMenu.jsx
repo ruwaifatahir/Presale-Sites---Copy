@@ -13,6 +13,7 @@ import { AiOutlineClose } from "react-icons/ai";
 import ConnectWalletButton from "../../connectWalletButton/ConnectWalletButton";
 import Whitepaper from "../../../assets/pdf/whitepaper.pdf";
 import Data from "../../../assets/data/demoMenuList";
+import Logo4 from "/assets/images/logo-4.png";
 
 const MobileMenu = ({ mobileMenuHandle }) => {
   return (
@@ -20,7 +21,7 @@ const MobileMenu = ({ mobileMenuHandle }) => {
       <div className="gittu-mobile-menu-content">
         <div className="mobile-menu-top">
           <NavLink className="mobile-logo" to="/" end>
-            <img src={Logo} alt="Logo" />
+            <img src={Logo4} alt="Logo" />
           </NavLink>
 
           <button className="mobile-menu-close" onClick={mobileMenuHandle}>
