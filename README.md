@@ -1,4 +1,4 @@
-# Gittu - ICO/IDO/IGO Token Presale Template With Smart Contract (React JS+Solidity)
+# Gittu - ICO/IDO/IGO Token Presale Template With Smart Contract (React JS+Solidity) 
 
 # Getting Started with React App  
 
