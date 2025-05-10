@@ -4,6 +4,11 @@ import Logo from "../../../assets/images/logo.png";
 import Telegram from "../../../assets/images/icons/telegram.svg";
 import Discord from "../../../assets/images/icons/discord.svg";
 import Twitter from "../../../assets/images/icons/twitter.svg";
+import reddit from "../../../assets/images/icons/reddit.svg";
+import insta from "/assets/images/icons/instagram.svg";
+import youtube from "/assets/images/icons/youtube.svg";
+import facebook from "/assets/images/icons/facebook.svg";
+
 import { AiOutlineClose } from "react-icons/ai";
 import ConnectWalletButton from "../../connectWalletButton/ConnectWalletButton";
 import Whitepaper from "../../../assets/pdf/whitepaper.pdf";
@@ -33,24 +38,78 @@ const MobileMenu = ({ mobileMenuHandle }) => {
           ))}
         </ul> */}
 
+        <ul className="mobile-menu-list mb-40">
+          <li>
+            <a href="https://digifolios.com/" target="_blank" rel="noreferrer">
+              DigiToken Website
+            </a>
+          </li>
+        </ul>
+
         <ul className="mobile-social-links mb-40">
           <li>
             <a
-              href="https://web.telegram.org/"
+              href="https://discord.com/invite/vxPeNFSx"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img src={Discord} alt="icon" />
+            </a>
+          </li>
+
+          <li>
+            <a href="https://x.com/DigifolioX" target="_blank" rel="noreferrer">
+              <img src={Twitter} alt="icon" />
+            </a>
+          </li>
+
+          <li>
+            <a
+              href="https://www.reddit.com/r/Digifolios/?rdt=61480"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img src={reddit} alt="icon" />
+            </a>
+          </li>
+
+          <li>
+            <a
+              href="https://t.me/digifoliofficial"
               target="_blank"
               rel="noreferrer"
             >
               <img src={Telegram} alt="icon" />
             </a>
           </li>
+
           <li>
-            <a href="https://discord.com/" target="_blank" rel="noreferrer">
-              <img src={Discord} alt="icon" />
+            <a
+              href="https://www.instagram.com/digifolios"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img src={insta} alt="icon" />
             </a>
           </li>
+
           <li>
-            <a href="https://twitter.com/" target="_blank" rel="noreferrer">
-              <img src={Twitter} alt="icon" />
+            <a
+              href="https://www.youtube.com/@Digifolios"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img src={youtube} alt="icon" />
+            </a>
+          </li>
+
+          <li>
+            <a
+              href="https://www.facebook.com/digifoliotoken/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img src={facebook} alt="icon" />
             </a>
           </li>
         </ul>
