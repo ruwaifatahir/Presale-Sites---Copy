@@ -62,6 +62,19 @@ export const PRESALE_ABI = [
       {
         indexed: false,
         internalType: "uint256",
+        name: "newMaxStakeAmount",
+        type: "uint256",
+      },
+    ],
+    name: "MaxStakeAmountUpdated",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
         name: "newMinStakeAmount",
         type: "uint256",
       },
@@ -163,25 +176,6 @@ export const PRESALE_ABI = [
       },
     ],
     name: "StakingReferralRewardsDistributed",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "minThreshold",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "highThreshold",
-        type: "uint256",
-      },
-    ],
-    name: "ThresholdsUpdated",
     type: "event",
   },
   {
@@ -310,13 +304,6 @@ export const PRESALE_ABI = [
     type: "function",
   },
   {
-    inputs: [],
-    name: "fundContractBNB",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
     inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
     name: "fundContractTokens",
     outputs: [],
@@ -324,7 +311,7 @@ export const PRESALE_ABI = [
     type: "function",
   },
   {
-    inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
+    inputs: [{ internalType: "uint256", name: "lockPeriod", type: "uint256" }],
     name: "getAPY",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
@@ -382,13 +369,6 @@ export const PRESALE_ABI = [
   },
   {
     inputs: [],
-    name: "highThreshold",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
     name: "maxStakeAmount",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
@@ -397,13 +377,6 @@ export const PRESALE_ABI = [
   {
     inputs: [],
     name: "minStakeAmount",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "minThreshold",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
@@ -539,6 +512,15 @@ export const PRESALE_ABI = [
   },
   {
     inputs: [
+      { internalType: "uint256", name: "newMaxStakeAmount", type: "uint256" },
+    ],
+    name: "updateMaxStakeAmount",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
       { internalType: "uint256", name: "newMinStakeAmount", type: "uint256" },
     ],
     name: "updateMinStakeAmount",
@@ -551,16 +533,6 @@ export const PRESALE_ABI = [
       { internalType: "address", name: "_stakingToken", type: "address" },
     ],
     name: "updateStakingToken",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "uint256", name: "newMinThreshold", type: "uint256" },
-      { internalType: "uint256", name: "newHighThreshold", type: "uint256" },
-    ],
-    name: "updateThresholds",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

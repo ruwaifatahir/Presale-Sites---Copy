@@ -13,7 +13,7 @@ import UserDataDisplayStyleWrapper from "./UserDataDisplay.style";
 const UserDataDisplay = () => {
   const { address, isConnected, chainId } = useAccount();
   // State for current timestamp (needed for claim eligibility check)
-  const [, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
+  const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
 
   // Update current time periodically for eligibility checks
   useEffect(() => {
@@ -74,7 +74,7 @@ const UserDataDisplay = () => {
     },
   });
 
-  // 6. Fetch Direct Referrals Count
+  // 5. Fetch Direct Referrals Count
   const { data: directReferralsData, isLoading: isReferralsLoading } =
     useReadContract({
       address: PRESALE_ADDRESS,
@@ -88,7 +88,7 @@ const UserDataDisplay = () => {
       },
     });
 
-  // 7. Fetch Claimable Referral Rewards
+  // 6. Fetch Claimable Referral Rewards
   const { data: claimableRefRewardsData, isLoading: isRefRewardsLoading } =
     useReadContract({
       address: PRESALE_ADDRESS,
@@ -101,7 +101,7 @@ const UserDataDisplay = () => {
       },
     });
 
-  // 5. Process and Format Data
+  // 7. Process and Format Data
   const processedData = useMemo(() => {
     const bnbBalance = balanceData
       ? parseFloat(formatEther(balanceData.value)).toFixed(4)
@@ -128,7 +128,7 @@ const UserDataDisplay = () => {
     }
     const formattedTotalRewards = formatEther(totalRewards); // Rewards are paid in BNB (wei)
 
-    // Basic stake summary (can be expanded)
+    // Basic stake summary
     const activeStakeCount =
       userStakesData?.filter((s) => !s.withdrawn).length || 0;
 
@@ -184,6 +184,26 @@ const UserDataDisplay = () => {
             <span className="data-label">Total Staked:</span>
             <span className="data-value">
               {processedData.formattedTotalStaked} DIGI
+            </span>
+          </div>
+          <div className="data-row">
+            <span className="data-label">Claimable Rewards:</span>
+            <span className="data-value">
+              {processedData.formattedTotalRewards}{" "}
+              {balanceData?.symbol || "BNB"}
+            </span>
+          </div>
+          <div className="data-row">
+            <span className="data-label">Referral Rewards:</span>
+            <span className="data-value">
+              {processedData.claimableRefRewardsBNB}{" "}
+              {balanceData?.symbol || "BNB"}
+            </span>
+          </div>
+          <div className="data-row">
+            <span className="data-label">Direct Referrals:</span>
+            <span className="data-value">
+              {processedData.directReferralsCount}
             </span>
           </div>
         </>

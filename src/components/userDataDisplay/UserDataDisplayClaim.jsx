@@ -11,12 +11,13 @@ import { PRESALE_ADDRESS } from "../../config/constants"; // Adjust path if need
 import { PRESALE_ABI } from "../../config/presaleAbi"; // Adjust path if needed
 import UserDataDisplayStyleWrapper from "./UserDataDisplay.style";
 
-// Define WEEK constant (must match contract's WEEK = 30 seconds for calculation)
-const WEEK_SECONDS = 30n;
+// Define WEEK constant to match contract's WEEK = 1 weeks
+const WEEK_SECONDS = 604800n;
 
 const UserDataDisplayClaim = () => {
   const { address, isConnected, chainId } = useAccount();
   const [pendingClaimIndex, setPendingClaimIndex] = useState(-1);
+  const [pendingWithdrawIndex, setPendingWithdrawIndex] = useState(-1);
   // State for current timestamp (needed for claim eligibility check)
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
   // State for stakes list visibility
@@ -108,8 +109,11 @@ const UserDataDisplayClaim = () => {
       },
     });
 
-  // Add write hook for claiming individual stake rewards
+  // Add write hooks for claiming rewards and withdrawing
   const { writeContractAsync: claimStakeReward, reset: resetStakeClaim } =
+    useWriteContract();
+
+  const { writeContractAsync: withdrawStake, reset: resetWithdraw } =
     useWriteContract();
 
   // 5. Process and Format Data
@@ -207,10 +211,61 @@ const UserDataDisplayClaim = () => {
     }
   };
 
+  // --- Handle Withdrawing Stake ---
+  const handleWithdrawStake = async (stakeIndex) => {
+    if (pendingWithdrawIndex !== -1) return; // Prevent multiple withdrawals at once
+    setPendingWithdrawIndex(stakeIndex);
+    try {
+      console.log(`Attempting to withdraw stake index: ${stakeIndex}`);
+      await withdrawStake({
+        address: PRESALE_ADDRESS,
+        abi: PRESALE_ABI,
+        functionName: "withdraw",
+        args: [stakeIndex],
+        chainId: 56,
+      });
+      console.log(
+        `Withdrawal transaction submitted for stake index: ${stakeIndex}`
+      );
+      resetWithdraw(); // Reset hook state
+    } catch (error) {
+      console.error(`Failed to withdraw stake index ${stakeIndex}:`, error);
+      resetWithdraw();
+    } finally {
+      setPendingWithdrawIndex(-1); // Always reset pending index
+    }
+  };
+
   // Helper to format timestamps (optional)
   const formatDate = (timestamp) => {
     if (!timestamp || timestamp === 0n) return "N/A";
     return new Date(Number(timestamp) * 1000).toLocaleDateString();
+  };
+
+  // Calculate the withdrawable percentage for a stake
+  const calculateWithdrawablePercentage = (stake) => {
+    if (!stake || stake.withdrawn) return 0;
+
+    // If lock period is still active, nothing can be withdrawn
+    if (BigInt(currentTime) < stake.stakingStartTime + stake.lockPeriod) {
+      return 0;
+    }
+
+    // If withdrawal hasn't started yet, return 0
+    if (stake.withdrawalStartTime === 0n) {
+      return 0;
+    }
+
+    const timeSinceWithdrawalStart =
+      BigInt(currentTime) - stake.withdrawalStartTime;
+    const weeksPassed = timeSinceWithdrawalStart / WEEK_SECONDS;
+    let allowedPercentage = weeksPassed * 10n;
+
+    if (allowedPercentage > 100n) {
+      allowedPercentage = 100n;
+    }
+
+    return Number(allowedPercentage - stake.withdrawnPercentage);
   };
 
   // --- Toggle Stakes Visibility ---
@@ -310,6 +365,15 @@ const UserDataDisplayClaim = () => {
                   const isClaimable =
                     canClaimWeekly && isLockPeriodActive && hasRewards;
 
+                  // Check withdrawal eligibility
+                  const lockPeriodEnded =
+                    BigInt(currentTime) >=
+                    stake.stakingStartTime + stake.lockPeriod;
+                  const withdrawablePercentage =
+                    calculateWithdrawablePercentage(stake);
+                  const canWithdraw =
+                    lockPeriodEnded && withdrawablePercentage > 0;
+
                   return (
                     <div key={index} className="stake-item">
                       <div className="stake-details">
@@ -324,18 +388,45 @@ const UserDataDisplayClaim = () => {
                           )}
                         </span>
                         <span>Claimable: {formattedClaimableForStake} BNB</span>
+                        {lockPeriodEnded && (
+                          <span>
+                            Withdrawn: {Number(stake.withdrawnPercentage)}%
+                          </span>
+                        )}
                       </div>
-                      <button
-                        className="claim-button"
-                        onClick={() => handleClaimStakeReward(index)}
-                        disabled={
-                          !isClaimable ||
-                          pendingClaimIndex === index ||
-                          pendingClaimIndex !== -1
-                        }
-                      >
-                        {pendingClaimIndex === index ? "Claiming..." : "Claim"}
-                      </button>
+                      <div className="stake-actions">
+                        <button
+                          className="claim-button"
+                          onClick={() => handleClaimStakeReward(index)}
+                          disabled={
+                            !isClaimable ||
+                            pendingClaimIndex === index ||
+                            pendingClaimIndex !== -1
+                          }
+                        >
+                          {pendingClaimIndex === index
+                            ? "Claiming..."
+                            : "Claim"}
+                        </button>
+
+                        {lockPeriodEnded && (
+                          <button
+                            className="withdraw-button"
+                            onClick={() => handleWithdrawStake(index)}
+                            disabled={
+                              !canWithdraw ||
+                              pendingWithdrawIndex === index ||
+                              pendingWithdrawIndex !== -1
+                            }
+                          >
+                            {pendingWithdrawIndex === index
+                              ? "Processing..."
+                              : withdrawablePercentage > 0
+                              ? `Withdraw ${withdrawablePercentage}%`
+                              : "No tokens to withdraw"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })

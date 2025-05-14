@@ -1,169 +1,132 @@
 import styled from "styled-components";
 
 const UserDataDisplayStyleWrapper = styled.div`
-  margin-top: 30px;
-  /* padding: 20px; */
-  /* background: ${({ theme }) => theme.colors.white}0F; */
-  /* border: 1px solid ${({ theme }) => theme.colors.white}1A; */
-  /* border-radius: 10px; */
+  color: #ffffff; /* Default white text */
+  padding: 15px 20px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.4); /* Semi-transparent background */
+  border: 1px solid rgba(110, 86, 248, 0.3); /* Subtle border */
+  backdrop-filter: blur(5px);
+  margin-bottom: 20px;
 
-  /* h4 {
-    color: ${({ theme }) => theme.colors.primary};
-    margin-bottom: 20px;
+  .loading-text {
     text-align: center;
-    text-transform: uppercase;
-  } */
-
-  border-top: 1px solid ${({ theme }) => theme.colors.white}1A;
-  padding-top: 20px;
-
-  border-bottom: 1px solid ${({ theme }) => theme.colors.white}1A;
-  padding-bottom: 20px;
-  margin-bottom: 30px;
+    padding: 10px 0;
+    color: rgba(255, 255, 255, 0.7);
+  }
 
   .data-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
-    /* padding-bottom: 12px; */
-    /* border-bottom: 1px solid ${({ theme }) => theme.colors.white}1A; */
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 
     &:last-child {
-      margin-bottom: 0;
-      /* padding-bottom: 0; */
-      /* border-bottom: none; */
+      border-bottom: none;
     }
   }
 
   .data-label {
     font-weight: 500;
-    color: ${({ theme }) => theme.colors.textSecondary};
+    color: rgba(255, 255, 255, 0.7);
   }
 
   .data-value {
     font-weight: 600;
-    color: ${({ theme }) => theme.colors.white};
+    color: #6e56f8; /* Theme color */
   }
 
-  .loading-text,
-  .no-stakes-text {
-    text-align: center;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    padding: 20px 0;
-  }
-
-  // --- Styles for Individual Stakes ---
+  /* Stakes section styling */
   .stakes-title {
-    color: ${({ theme }) =>
-      theme.colors.textPrimary}; // Or another appropriate color
-    text-align: center;
-    margin-top: 30px; // Space above title
-    margin-bottom: 15px;
-    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    margin: 15px 0 5px;
     font-size: 16px;
     font-weight: 600;
-    cursor: pointer; // Indicate it's clickable
-    display: flex; // Use flex for icon alignment
-    justify-content: space-between; // Align text left, icon right
-    align-items: center;
-    position: relative; // For icon positioning
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    position: relative;
 
-    .collapse-icon {
-      width: 10px;
-      height: 10px;
-      border: solid ${({ theme }) => theme.colors.textSecondary}; // Chevron color
-      border-width: 0 2px 2px 0; // Creates the chevron shape (bottom and right borders)
-      display: inline-block;
-      padding: 3px;
-      transform: translateY(-25%) rotate(45deg); // Point DOWN when collapsed
+    &::after {
+      content: ${(props) => (props.isStakesVisible ? "'▼'" : "'▶'")};
+      position: absolute;
+      right: 10px;
       transition: transform 0.3s ease;
     }
   }
 
-  // Rotate chevron icon when expanded
-  ${({ isStakesVisible }) =>
-    isStakesVisible &&
-    `
-    .stakes-title .collapse-icon {
-        transform: translateY(-50%) rotate(-135deg); // Point UP when expanded
-    }
-  `}
-
   .stakes-list {
-    display: flex;
-    flex-direction: column;
-    gap: 15px; // Space between stake items
-    overflow: hidden; // Needed for smooth transition
-    transition: max-height 0.5s ease-out, opacity 0.5s ease-out; // Add transition
-    max-height: ${({ isStakesVisible }) =>
-      isStakesVisible ? "1000px" : "0"}; // Control height
-    opacity: ${({ isStakesVisible }) =>
-      isStakesVisible ? 1 : 0}; // Control opacity
-    margin-top: 15px; // Add space below title when expanded
+    margin-top: 10px;
   }
 
   .stake-item {
+    background: rgba(110, 86, 248, 0.1);
+    border: 1px solid rgba(110, 86, 248, 0.2);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 15px; // Adjust padding
-    background: none; // Remove item background for cleaner look
-    border: none; // Remove item border
-    border-bottom: 1px solid ${({ theme }) => theme.colors.white}1A; // Use bottom border as separator
-    border-radius: 0; // Remove item radius
-    gap: 15px; // Adjust gap
-
-    &:last-child {
-      border-bottom: none; // No border on last item
-    }
+    flex-direction: column;
+    gap: 10px;
   }
 
   .stake-details {
     display: flex;
-    flex-direction: row; // Display details side-by-side
-    justify-content: space-between; // Space out details
-    align-items: center;
-    gap: 15px; // Adjust gap
-    font-size: 14px;
+    flex-direction: column;
+    gap: 5px;
 
     span {
-      color: ${({ theme }) => theme.colors.textSecondary};
-      white-space: nowrap; // Prevent wrapping
-      &:first-child {
-        // Keep amount prominent
-        color: ${({ theme }) => theme.colors.white};
-        font-weight: 500;
-      }
-      // Add specific style for claimable amount maybe?
-      // &:nth-child(3) { font-weight: 500; }
+      font-size: 14px;
+    }
+  }
+
+  .stake-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .claim-button,
+  .withdraw-button {
+    padding: 8px 15px;
+    border-radius: 5px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
   }
 
   .claim-button {
-    padding: 5px 10px; // Slightly smaller button
-    font-size: 13px;
-    font-weight: 500;
-    background-color: ${({ theme }) => theme.colors.primary};
-    color: ${({ theme }) => theme.colors.white};
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-    white-space: nowrap; // Prevent text wrapping
+    background-color: #6e56f8;
+    color: white;
 
     &:hover:not(:disabled) {
-      background-color: ${({ theme }) =>
-        theme.colors.primaryHover}; // Adjust hover color
+      background-color: #5a45e0;
     }
+  }
 
-    &:disabled {
-      background-color: ${({ theme }) =>
-        theme.colors.bgDisabled}; // Use disabled bg color
-      color: ${({ theme }) =>
-        theme.colors.textDisabled}; // Use disabled text color
-      cursor: not-allowed;
+  .withdraw-button {
+    background-color: #28a745;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background-color: #218838;
     }
+  }
+
+  .no-stakes-text {
+    text-align: center;
+    padding: 15px 0;
+    color: rgba(255, 255, 255, 0.7);
+    font-style: italic;
   }
 `;
 

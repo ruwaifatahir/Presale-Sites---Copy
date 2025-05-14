@@ -65,41 +65,29 @@ const PayWith = ({ variant }) => {
   const { data: contractData, isLoading: isContractDataLoading } =
     useReadContracts({
       contracts: [
-        // Fetch each APY range element individually using the auto-generated getter
+        // Fetch each APY range element for each lock period
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "apyRanges",
           args: [0],
           chainId: 56,
-        }, // Index 0
+        }, // 6 months APY
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "apyRanges",
           args: [1],
           chainId: 56,
-        }, // Index 1
+        }, // 1 year APY
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "apyRanges",
           args: [2],
           chainId: 56,
-        }, // Index 2
-        // Fetch thresholds and durations as before
-        {
-          address: PRESALE_ADDRESS,
-          abi: PRESALE_ABI,
-          functionName: "minThreshold",
-          chainId: 56,
-        },
-        {
-          address: PRESALE_ADDRESS,
-          abi: PRESALE_ABI,
-          functionName: "highThreshold",
-          chainId: 56,
-        },
+        }, // 2 years APY
+        // Fetch lock periods
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
@@ -147,15 +135,8 @@ const PayWith = ({ variant }) => {
     });
 
   // Process fetched contract data - adjust indices
-  const {
-    apyRanges,
-    minThreshold,
-    highThreshold,
-    sixMonths,
-    oneYear,
-    twoYears,
-  } = useMemo(() => {
-    if (!contractData || contractData.length < 8) return {};
+  const { apyRanges, sixMonths, oneYear, twoYears } = useMemo(() => {
+    if (!contractData || contractData.length < 6) return {};
 
     const results = contractData.map((item) => item?.result);
     const statuses = contractData.map((item) => item?.status);
@@ -169,20 +150,29 @@ const PayWith = ({ variant }) => {
 
     return {
       apyRanges: reconstructedApyRanges,
-      minThreshold: results[3],
-      highThreshold: results[4],
-      sixMonths: results[5],
-      oneYear: results[6],
-      twoYears: results[7],
+      sixMonths: results[3],
+      oneYear: results[4],
+      twoYears: results[5],
     };
   }, [contractData]);
 
   // Process fetched stake limits
   const { minStakeAmount, maxStakeAmount } = useMemo(() => {
-    if (!stakeLimitsData) return {};
+    if (
+      !stakeLimitsData ||
+      !stakeLimitsData[0]?.result ||
+      !stakeLimitsData[1]?.result
+    ) {
+      console.log("Stake limits data not available:", stakeLimitsData);
+      return { minStakeAmount: 0n, maxStakeAmount: 0n };
+    }
+
+    console.log("Raw min stake amount:", stakeLimitsData[0].result.toString());
+    console.log("Raw max stake amount:", stakeLimitsData[1].result.toString());
+
     return {
-      minStakeAmount: stakeLimitsData[0]?.result,
-      maxStakeAmount: stakeLimitsData[1]?.result,
+      minStakeAmount: stakeLimitsData[0].result,
+      maxStakeAmount: stakeLimitsData[1].result,
     };
   }, [stakeLimitsData]);
 
@@ -215,53 +205,72 @@ const PayWith = ({ variant }) => {
 
   // Calculate estimated total rewards
   const estimatedTotalRewards = useMemo(() => {
-    if (
-      !apyRanges ||
-      !minThreshold ||
-      !highThreshold ||
-      !sixMonths ||
-      !oneYear ||
-      !twoYears ||
-      !tokensToGet ||
-      tokensToGet === "0" ||
-      isContractDataLoading
-    ) {
-      return "0"; // Return 0 if data is missing or tokensToGet is 0
+    // First check if all the required data is available
+    if (!apyRanges || !sixMonths || !oneYear || !twoYears) {
+      console.warn("Missing contract data for reward calculation", {
+        apyRanges: apyRanges?.map((a) => a?.toString()),
+        sixMonths: sixMonths?.toString(),
+        oneYear: oneYear?.toString(),
+        twoYears: twoYears?.toString(),
+      });
+      return "0";
+    }
+
+    // Then check if input is valid
+    if (!input || Number(input) <= 0 || isContractDataLoading) {
+      return "0";
     }
 
     try {
-      // Parse tokensToGet (assuming 18 decimals for the token)
-      const tokensToGetBigInt = parseEther(tokensToGet); // Converts string like "123.45" to BigInt
+      // Get the input amount in BNB
+      const bnbAmount = parseEther(input);
 
-      // Determine APY based on thresholds
-      let selectedApy = apyRanges[0]; // Default to lowest APY (80%)
-      if (tokensToGetBigInt >= highThreshold) {
-        selectedApy = apyRanges[2]; // Highest APY (120%)
-      } else if (tokensToGetBigInt >= minThreshold) {
-        selectedApy = apyRanges[1]; // Medium APY (100%)
+      // Log inputs for debugging
+      console.log("Reward calc - BNB amount:", input);
+      console.log("Reward calc - Selected lock period:", selectedLockPeriod);
+      console.log(
+        "Reward calc - APY ranges:",
+        apyRanges?.map((a) => a?.toString())
+      );
+
+      // Determine APY based on lock period selection
+      let selectedApy;
+      let selectedDuration;
+
+      if (selectedLockPeriod === 0) {
+        selectedApy = apyRanges[0]; // 6 months APY (80%)
+        selectedDuration = sixMonths;
+      } else if (selectedLockPeriod === 1) {
+        selectedApy = apyRanges[1]; // 1 year APY (100%)
+        selectedDuration = oneYear;
+      } else {
+        selectedApy = apyRanges[2]; // 2 years APY (120%)
+        selectedDuration = twoYears;
       }
 
-      // Determine lock duration based on selection
-      let selectedDuration; // In seconds (BigInt)
-      if (selectedLockPeriod === 0) selectedDuration = sixMonths;
-      else if (selectedLockPeriod === 1) selectedDuration = oneYear;
-      else selectedDuration = twoYears;
+      console.log("Reward calc - Selected APY:", selectedApy?.toString());
+      console.log(
+        "Reward calc - Selected duration:",
+        selectedDuration?.toString()
+      );
 
-      // Get the input amount in BNB
-      const bnbAmount = parseEther(input || "0");
-      
-      // Constants for calculation - use the actual values from the contract
+      // Constants for calculation
       const APY_SCALING_FACTOR = BigInt(10000); // APY is stored in basis points (e.g., 8000 for 80%)
-      
-      // Calculate total rewards for the entire lock period in BNB
-      // Formula: (bnbAmount * APY * lockPeriod) / (oneYear * APY_SCALING_FACTOR)
+
+      // Calculate total rewards: (bnbAmount * APY * lockPeriod) / (oneYear * APY_SCALING_FACTOR)
       const totalRewardBigInt =
         (bnbAmount * selectedApy * selectedDuration) /
         (oneYear * APY_SCALING_FACTOR);
 
+      console.log(
+        "Reward calc - Total reward BigInt:",
+        totalRewardBigInt?.toString()
+      );
+
       // Convert to a more reasonable number by formatting with 18 decimals
       const formattedReward = formatEther(totalRewardBigInt);
-      
+      console.log("Reward calc - Formatted reward:", formattedReward);
+
       // Return with fixed decimal places for better readability
       return Number(formattedReward).toFixed(6);
     } catch (error) {
@@ -269,12 +278,9 @@ const PayWith = ({ variant }) => {
       return "Error"; // Indicate calculation error
     }
   }, [
-    tokensToGet,
     input,
     selectedLockPeriod,
     apyRanges,
-    minThreshold,
-    highThreshold,
     sixMonths,
     oneYear,
     twoYears,
@@ -283,59 +289,92 @@ const PayWith = ({ variant }) => {
 
   // Calculate estimated weekly rewards
   const estimatedWeeklyRewards = useMemo(() => {
-    if (
-      !apyRanges ||
-      !minThreshold ||
-      !highThreshold ||
-      !tokensToGet ||
-      tokensToGet === "0" ||
-      isContractDataLoading
-    ) {
-      return "0"; // Return 0 if data is missing or tokensToGet is 0
+    // Basic input validation
+    if (!apyRanges || !oneYear) {
+      console.warn("Missing contract data for weekly reward calculation");
+      return "0";
+    }
+
+    if (!input || Number(input) <= 0 || isContractDataLoading) {
+      return "0";
     }
 
     try {
-      // Parse tokensToGet (assuming 18 decimals for the token)
-      const tokensToGetBigInt = parseEther(tokensToGet);
+      // Determine APY based on lock period selection
+      let selectedApy;
 
-      // Determine APY based on thresholds
-      let selectedApy = apyRanges[0]; // Default to lowest APY (80%)
-      if (tokensToGetBigInt >= highThreshold) {
-        selectedApy = apyRanges[2]; // Highest APY (120%)
-      } else if (tokensToGetBigInt >= minThreshold) {
-        selectedApy = apyRanges[1]; // Medium APY (100%)
+      if (selectedLockPeriod === 0) {
+        selectedApy = apyRanges[0]; // 6 months APY (80%)
+      } else if (selectedLockPeriod === 1) {
+        selectedApy = apyRanges[1]; // 1 year APY (100%)
+      } else {
+        selectedApy = apyRanges[2]; // 2 years APY (120%)
       }
 
+      // Log key values for debugging
+      console.log("Weekly reward calc - BNB amount:", input);
+      console.log(
+        "Weekly reward calc - Selected APY:",
+        selectedApy?.toString()
+      );
+
       // Get the input amount in BNB
-      const bnbAmount = parseEther(input || "0");
-      
-      // Constants for calculation - use the actual values from the contract
+      const bnbAmount = parseEther(input);
+
+      // Constants for calculation
       const WEEK_DURATION = BigInt(604800); // 1 week in seconds
       const APY_SCALING_FACTOR = BigInt(10000); // APY is stored in basis points
-      
-      // Calculate weekly reward in BNB: (bnbAmount * apy * WEEK_DURATION) / (oneYear * scalingFactor)
+
+      // Calculate weekly reward: (bnbAmount * apy * WEEK_DURATION) / (oneYear * scalingFactor)
       const weeklyRewardBigInt =
         (bnbAmount * selectedApy * WEEK_DURATION) /
         (oneYear * APY_SCALING_FACTOR);
 
+      console.log(
+        "Weekly reward calc - Result BigInt:",
+        weeklyRewardBigInt?.toString()
+      );
+
       // Format the reward (assuming reward is in BNB - 18 decimals)
       const formattedReward = formatEther(weeklyRewardBigInt);
-      
+      console.log("Weekly reward calc - Formatted reward:", formattedReward);
+
       // Return with fixed decimal places for better readability
       return Number(formattedReward).toFixed(6);
     } catch (error) {
       console.error("Error calculating estimated weekly rewards:", error);
       return "Error"; // Indicate calculation error
     }
-  }, [
-    tokensToGet,
-    input,
-    apyRanges,
-    minThreshold,
-    highThreshold,
-    oneYear,
-    isContractDataLoading,
-  ]);
+  }, [input, apyRanges, oneYear, selectedLockPeriod, isContractDataLoading]);
+
+  // 1. Read staking token address from presale contract
+  const { data: stakingTokenAddress } = useReadContract({
+    address: PRESALE_ADDRESS,
+    abi: PRESALE_ABI,
+    functionName: "stakingToken",
+    chainId: 56,
+  });
+
+  // 2. Read decimals from staking token contract
+  const { data: tokenDecimalsRaw } = useReadContract({
+    address: stakingTokenAddress,
+    abi: [
+      {
+        inputs: [],
+        name: "decimals",
+        outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
+        stateMutability: "view",
+        type: "function",
+      },
+    ],
+    functionName: "decimals",
+    chainId: 56,
+    query: { enabled: !!stakingTokenAddress },
+  });
+
+  // Always use this for DIGI decimals
+  const digiDecimals =
+    typeof tokenDecimalsRaw === "number" ? tokenDecimalsRaw : 8;
 
   // --- Validation Effect ---
   useEffect(() => {
@@ -354,26 +393,35 @@ const PayWith = ({ variant }) => {
       return; // Wait for limits and price to load
     }
 
-    if (!minStakeAmount || !maxStakeAmount) {
-      console.error("Stake limits not loaded correctly.");
-      setValidationMessage("Could not verify stake limits.");
+    // Simple guard against missing data
+    if (
+      !minStakeAmount ||
+      !maxStakeAmount ||
+      minStakeAmount === 0n ||
+      maxStakeAmount === 0n
+    ) {
       return;
     }
 
     try {
-      // Convert input DIGI amount string to BigInt (assuming 18 decimals)
-      const tokensToGetBigInt = parseUnits(tokensToGet, 18);
+      // Use the correct decimals for DIGI
+      const tokensToGetBigInt = parseUnits(tokensToGet, digiDecimals);
+      const minFormatted = formatUnits(minStakeAmount, digiDecimals);
+      const maxFormatted = formatUnits(maxStakeAmount, digiDecimals);
 
       if (tokensToGetBigInt < minStakeAmount) {
-        const minFormatted = formatUnits(minStakeAmount, 18);
-        setValidationMessage(`Minimum stake amount is ${minFormatted} DIGI`);
+        const readableMin = Number(minFormatted).toLocaleString(undefined, {
+          maximumFractionDigits: 2,
+        });
+        setValidationMessage(`Minimum stake amount is ${readableMin} DIGI`);
       } else if (tokensToGetBigInt > maxStakeAmount) {
-        const maxFormatted = formatUnits(maxStakeAmount, 18);
-        setValidationMessage(`Maximum stake amount is ${maxFormatted} DIGI`);
+        const readableMax = Number(maxFormatted).toLocaleString(undefined, {
+          maximumFractionDigits: 0,
+        });
+        setValidationMessage(`Maximum stake amount is ${readableMax} DIGI`);
       }
     } catch (e) {
-      console.error("Error parsing/validating input amount:", e);
-      setValidationMessage("Invalid amount entered.");
+      // Don't show validation errors for technical issues
     }
   }, [
     input,
@@ -382,6 +430,7 @@ const PayWith = ({ variant }) => {
     maxStakeAmount,
     isLimitsLoading,
     isPriceLoading,
+    digiDecimals,
   ]);
 
   const handleInputChange = (e) => {
@@ -592,8 +641,9 @@ const PayWith = ({ variant }) => {
                 lineHeight: "1.4",
               }}
             >
-              Share your link! Earn 10% BNB rewards from the staking rewards
-              claimed by your direct referrals.
+              Share your link! Earn up to 30% BNB rewards from the staking
+              rewards claimed by your referrals across 6 levels (30%, 20%, 10%,
+              5%, 5%, 5%).
             </p>
           </div>
         </div>

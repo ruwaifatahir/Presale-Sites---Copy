@@ -4,11 +4,10 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { PRESALE_ADDRESS } from "../../config/constants";
 import { PRESALE_ABI } from "../../config/presaleAbi";
 import PropTypes from "prop-types";
+import { formatEther } from "viem";
 
 /**
- * Deploy staking token
- * Deploy presale contract (set staking token, deposit staking tokens, set base price, set owner)
- * Check getTokenPrice response
+ * Component for claiming referral rewards from the staking system
  */
 
 const ClaimWith = ({ variant }) => {
@@ -29,6 +28,11 @@ const ClaimWith = ({ variant }) => {
         refetchInterval: 15000, // e.g., every 15 seconds
       },
     });
+
+  // Format claimable rewards to display on button
+  const formattedClaimableRewards = claimableRefRewardsData
+    ? formatEther(claimableRefRewardsData)
+    : "0";
 
   const isClaimButtonDisabled =
     !isConnected ||
@@ -67,6 +71,14 @@ const ClaimWith = ({ variant }) => {
           ⚡ Buy early to get the best rate!
         </h5> */}
       <PayWithStyleWrapper variant={variant}>
+        <div className="referral-claim-info">
+          <p
+            className="referral-info-text"
+            style={{ marginBottom: "10px", fontSize: "14px" }}
+          >
+            Your referral rewards across 6 levels (30%, 20%, 10%, 5%, 5%, 5%)
+          </p>
+        </div>
         <button
           className="presale-item-btn presale-item-btn--secondary"
           disabled={isConnected ? isClaimButtonDisabled : false}
@@ -77,7 +89,9 @@ const ClaimWith = ({ variant }) => {
             ? "Connect Wallet"
             : isClaimPending
             ? "Claiming..."
-            : "Claim Referrals"}
+            : `Claim ${Number(formattedClaimableRewards).toFixed(
+                6
+              )} BNB Referrals`}
         </button>
       </PayWithStyleWrapper>
     </div>
