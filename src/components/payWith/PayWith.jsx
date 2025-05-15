@@ -6,17 +6,12 @@ import {
   useAccount,
 } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { PRESALE_ADDRESS } from "../../config/constants";
+import { PRESALE_ADDRESS, USDT_ADDRESS } from "../../config/constants";
 import { PRESALE_ABI } from "../../config/presaleAbi";
+import { IERC20_ABI } from "../../config/erc20Abi";
 import { useState, useMemo, useEffect } from "react";
 import PropTypes from "prop-types";
-import {
-  formatEther,
-  parseEther,
-  isAddress,
-  formatUnits,
-  parseUnits,
-} from "viem";
+import { formatUnits, parseEther, isAddress, parseUnits } from "viem";
 import Dropdown from "./Dropdown/Dropdown"; // Import the refactored Dropdown
 
 /**
@@ -34,85 +29,314 @@ const LOCK_PERIOD_OPTIONS = [
   { label: "24 Months Lock", value: 2 },
 ];
 
+const PAYMENT_OPTIONS = [
+  { label: "Pay with BNB", value: "BNB" },
+  { label: "Pay with USDT", value: "USDT" },
+];
+
 const PayWith = ({ variant }) => {
   const [input, setInput] = useState("");
   const [selectedLockPeriod, setSelectedLockPeriod] = useState(
     LOCK_PERIOD_OPTIONS[0].value
   );
-  // State to store the referral address from URL or ZERO_ADDRESS
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
+    PAYMENT_OPTIONS[0].value
+  );
   const [urlReferralAddress, setUrlReferralAddress] = useState(ZERO_ADDRESS);
-  // State for copy button feedback
   const [isLinkCopied, setIsLinkCopied] = useState(false);
-  // State for validation messages
   const [validationMessage, setValidationMessage] = useState("");
+  const [contractError, setContractError] = useState("");
+  const [isApprovalPending, setIsApprovalPending] = useState(false);
 
   const { address, isConnected } = useAccount();
-  // Separate write hook for claim, or manage pending state carefully if using one
   const { writeContract, isPending: isWritePending } = useWriteContract();
   const { openConnectModal } = useConnectModal();
 
+  // 1. First get staking token address
+  const { data: stakingTokenAddress } = useReadContract({
+    address: PRESALE_ADDRESS,
+    abi: PRESALE_ABI,
+    functionName: "stakingToken",
+    chainId: 97,
+  });
+
+  // 2. Then get decimals from staking token
+  const { data: tokenDecimalsRaw } = useReadContract({
+    address: stakingTokenAddress,
+    abi: [
+      {
+        inputs: [],
+        name: "decimals",
+        outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
+        stateMutability: "view",
+        type: "function",
+      },
+    ],
+    functionName: "decimals",
+    chainId: 97,
+    query: { enabled: !!stakingTokenAddress },
+  });
+
+  // 3. Set digiDecimals
+  const digiDecimals = useMemo(() => {
+    return typeof tokenDecimalsRaw === "number" ? tokenDecimalsRaw : 18;
+  }, [tokenDecimalsRaw]);
+
+  // Debug log for contract configuration and chain connection
+  useEffect(() => {
+    console.log("Contract configuration:", {
+      PRESALE_ADDRESS,
+      USDT_ADDRESS,
+      stakingTokenAddress: stakingTokenAddress?.toString(),
+      chainId: 97,
+    });
+
+    // Verify price functions in ABI
+    const priceFunctions = PRESALE_ABI.filter(
+      (item) =>
+        item.name === "getCurrentTokenPrice" ||
+        item.name === "getCurrentTokenPriceUSDT"
+    );
+    console.log("Price functions in ABI:", priceFunctions);
+
+    // Log contract read configuration
+    console.log("Contract read configuration:", {
+      address: PRESALE_ADDRESS,
+      abi: PRESALE_ABI.length + " functions",
+      chainId: 97,
+      enabled: true,
+    });
+  }, [stakingTokenAddress]);
+
+  // 4. Get token prices with more detailed error handling
   const { data: tokenPriceInWei, isLoading: isPriceLoading } = useReadContract({
     address: PRESALE_ADDRESS,
     abi: PRESALE_ABI,
     functionName: "getCurrentTokenPrice",
-    chainId: 56,
+    chainId: 97,
     query: {
       enabled: true,
+      retry: 3,
+      onError: (error) => {
+        console.error("Error fetching BNB price:", error);
+        console.error("Error details:", {
+          error: error.message,
+          cause: error.cause,
+          name: error.name,
+        });
+        setContractError(
+          "Failed to fetch BNB price. Please check your connection."
+        );
+      },
+      onSuccess: (data) => {
+        console.log("Successfully fetched BNB price:", data?.toString());
+      },
     },
   });
 
-  // Fetch necessary contract data for reward calculation
+  const { data: tokenPriceInUSDT, isLoading: isUsdtPriceLoading } =
+    useReadContract({
+      address: PRESALE_ADDRESS,
+      abi: PRESALE_ABI,
+      functionName: "getCurrentTokenPriceUSDT",
+      chainId: 97,
+      query: {
+        enabled: true,
+        retry: 3,
+        onError: (error) => {
+          console.error("Error fetching USDT price:", error);
+          console.error("Error details:", {
+            error: error.message,
+            cause: error.cause,
+            name: error.name,
+          });
+          setContractError(
+            "Failed to fetch USDT price. Please check your connection."
+          );
+        },
+        onSuccess: (data) => {
+          console.log("Successfully fetched USDT price:", data?.toString());
+        },
+      },
+    });
+
+  // Debug log for price fetching
+  useEffect(() => {
+    console.log("Price fetch status:", {
+      tokenPriceInWei: tokenPriceInWei?.toString(),
+      tokenPriceInUSDT: tokenPriceInUSDT?.toString(),
+      isPriceLoading,
+      isUsdtPriceLoading,
+    });
+  }, [tokenPriceInWei, tokenPriceInUSDT, isPriceLoading, isUsdtPriceLoading]);
+
+  const tokenPrice = useMemo(() => {
+    if (selectedPaymentMethod === "BNB") {
+      if (!tokenPriceInWei) {
+        console.log("No BNB price available");
+        return 0n;
+      }
+      try {
+        console.log("Using BNB Price:", tokenPriceInWei.toString());
+        return tokenPriceInWei;
+      } catch (e) {
+        console.error("Error with BNB price:", e);
+        return 0n;
+      }
+    } else {
+      if (!tokenPriceInUSDT) {
+        console.log("No USDT price available");
+        return 0n;
+      }
+      try {
+        console.log("Using USDT Price:", tokenPriceInUSDT.toString());
+        return tokenPriceInUSDT;
+      } catch (e) {
+        console.error("Error with USDT price:", e);
+        return 0n;
+      }
+    }
+  }, [tokenPriceInWei, tokenPriceInUSDT, selectedPaymentMethod]);
+
+  // 5. Get USDT allowance
+  const { data: usdtAllowance } = useReadContract({
+    address: USDT_ADDRESS,
+    abi: IERC20_ABI,
+    functionName: "allowance",
+    args: [address || ZERO_ADDRESS, PRESALE_ADDRESS],
+    chainId: 97,
+    query: {
+      enabled: !!address && selectedPaymentMethod === "USDT",
+    },
+  });
+
+  const tokensToGet = useMemo(() => {
+    console.log("Calculating tokens with:", {
+      input,
+      selectedPaymentMethod,
+      tokenPrice: tokenPrice?.toString(),
+      digiDecimals,
+      isPriceLoading,
+      isUsdtPriceLoading,
+    });
+
+    const inputAmount = Number(input);
+    if (
+      (selectedPaymentMethod === "BNB" && isPriceLoading) ||
+      (selectedPaymentMethod === "USDT" && isUsdtPriceLoading) ||
+      !tokenPrice ||
+      tokenPrice === 0n ||
+      !input ||
+      isNaN(inputAmount) ||
+      inputAmount <= 0 ||
+      !digiDecimals
+    ) {
+      console.log("Returning 0 due to validation");
+      return "0";
+    }
+
+    try {
+      // Convert input amount to proper decimals based on payment method
+      const inputInWei =
+        selectedPaymentMethod === "BNB"
+          ? parseEther(input) // 18 decimals for BNB
+          : parseUnits(input, 6); // 6 decimals for USDT
+
+      console.log("Input in Wei:", inputInWei.toString());
+      console.log("Token price:", tokenPrice.toString());
+      console.log("Token decimals:", digiDecimals);
+
+      // Calculate tokens based on contract logic
+      let tokens;
+      if (selectedPaymentMethod === "BNB") {
+        // For BNB: (input * 10^digiDecimals) / price
+        // input is in 18 decimals, price is in 18 decimals
+        tokens = (inputInWei * 10n ** BigInt(digiDecimals)) / tokenPrice;
+      } else {
+        // For USDT: (input * 10^(digiDecimals + 12)) / price
+        // input is in 6 decimals, price is in 18 decimals
+        // We need to adjust input to match price decimals
+        const decimalAdjustment = 10n ** BigInt(digiDecimals + 12); // Add 12 to bridge the gap between USDT (6) and price (18) decimals
+        tokens = (inputInWei * decimalAdjustment) / tokenPrice;
+      }
+
+      console.log("Raw calculated tokens:", tokens.toString());
+
+      // Format to human-readable number with proper decimals
+      const formattedTokens = formatUnits(tokens, digiDecimals);
+      console.log("Formatted tokens:", formattedTokens);
+
+      return formattedTokens;
+    } catch (e) {
+      console.error("Error calculating tokens:", e);
+      return "0";
+    }
+  }, [
+    input,
+    tokenPrice,
+    selectedPaymentMethod,
+    isPriceLoading,
+    isUsdtPriceLoading,
+    digiDecimals,
+  ]);
+
+  // Fetch necessary contract data for reward calculation with better error handling
   const { data: contractData, isLoading: isContractDataLoading } =
     useReadContracts({
       contracts: [
-        // Fetch each APY range element for each lock period
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "apyRanges",
           args: [0],
-          chainId: 56,
-        }, // 6 months APY
+          chainId: 97,
+        },
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "apyRanges",
           args: [1],
-          chainId: 56,
-        }, // 1 year APY
+          chainId: 97,
+        },
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "apyRanges",
           args: [2],
-          chainId: 56,
-        }, // 2 years APY
-        // Fetch lock periods
+          chainId: 97,
+        },
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "sixMonths",
-          chainId: 56,
+          chainId: 97,
         },
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "oneYear",
-          chainId: 56,
+          chainId: 97,
         },
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "twoYears",
-          chainId: 56,
+          chainId: 97,
         },
       ],
       query: {
         enabled: true,
+        retry: 3,
+        onError: (error) => {
+          console.error("Error fetching contract data:", error);
+          setContractError(
+            "Failed to fetch contract data. Please check your connection."
+          );
+        },
       },
     });
 
-  // Fetch Min/Max Stake Amounts
+  // Fetch Min/Max Stake Amounts with better error handling
   const { data: stakeLimitsData, isLoading: isLimitsLoading } =
     useReadContracts({
       contracts: [
@@ -120,36 +344,54 @@ const PayWith = ({ variant }) => {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "minStakeAmount",
-          chainId: 56,
+          chainId: 97,
         },
         {
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "maxStakeAmount",
-          chainId: 56,
+          chainId: 97,
         },
       ],
       query: {
-        enabled: true, // Fetch immediately
+        enabled: true,
+        retry: 3,
+        onError: (error) => {
+          console.error("Error fetching stake limits:", error);
+          setContractError(
+            "Failed to fetch stake limits. Please check your connection."
+          );
+        },
       },
     });
 
-  // Process fetched contract data - adjust indices
+  // Process fetched contract data with better error handling
   const { apyRanges, sixMonths, oneYear, twoYears } = useMemo(() => {
-    if (!contractData || contractData.length < 6) return {};
+    if (!contractData || contractData.length < 6) {
+      console.warn("Contract data not available:", contractData);
+      return {
+        apyRanges: [8000n, 10000n, 12000n], // Default values
+        sixMonths: 26n * 7n * 24n * 60n * 60n, // 26 weeks in seconds
+        oneYear: 52n * 7n * 24n * 60n * 60n, // 52 weeks in seconds
+        twoYears: 104n * 7n * 24n * 60n * 60n, // 104 weeks in seconds
+      };
+    }
 
     const results = contractData.map((item) => item?.result);
     const statuses = contractData.map((item) => item?.status);
 
     if (statuses.some((status) => status !== "success")) {
       console.error("Failed to read some contract data:", contractData);
-      return {};
+      return {
+        apyRanges: [8000n, 10000n, 12000n], // Default values
+        sixMonths: 26n * 7n * 24n * 60n * 60n,
+        oneYear: 52n * 7n * 24n * 60n * 60n,
+        twoYears: 104n * 7n * 24n * 60n * 60n,
+      };
     }
 
-    const reconstructedApyRanges = [results[0], results[1], results[2]];
-
     return {
-      apyRanges: reconstructedApyRanges,
+      apyRanges: [results[0], results[1], results[2]],
       sixMonths: results[3],
       oneYear: results[4],
       twoYears: results[5],
@@ -176,33 +418,6 @@ const PayWith = ({ variant }) => {
     };
   }, [stakeLimitsData]);
 
-  const tokenPriceInBnb = useMemo(() => {
-    if (!tokenPriceInWei) return 0;
-    try {
-      return Number(formatEther(tokenPriceInWei));
-    } catch (e) {
-      console.error("Error formatting token price:", e);
-      return 0;
-    }
-  }, [tokenPriceInWei]);
-
-  const tokensToGet = useMemo(() => {
-    const inputAmount = Number(input);
-    if (
-      isPriceLoading ||
-      !tokenPriceInBnb ||
-      tokenPriceInBnb === 0 ||
-      !input ||
-      isNaN(inputAmount) ||
-      inputAmount <= 0
-    ) {
-      return "0";
-    }
-    const tokens = inputAmount / tokenPriceInBnb;
-    // Return the value without fixing decimals here, handle formatting later
-    return tokens.toString(); // Keep as string for potential BigInt parsing
-  }, [input, tokenPriceInBnb, isPriceLoading]);
-
   // Calculate estimated total rewards
   const estimatedTotalRewards = useMemo(() => {
     // First check if all the required data is available
@@ -222,11 +437,14 @@ const PayWith = ({ variant }) => {
     }
 
     try {
-      // Get the input amount in BNB
-      const bnbAmount = parseEther(input);
+      // Get the input amount in proper decimals based on payment method
+      const inputAmount =
+        selectedPaymentMethod === "BNB"
+          ? parseEther(input)
+          : parseUnits(input, 6); // USDT has 6 decimals
 
       // Log inputs for debugging
-      console.log("Reward calc - BNB amount:", input);
+      console.log("Reward calc - Amount:", input);
       console.log("Reward calc - Selected lock period:", selectedLockPeriod);
       console.log(
         "Reward calc - APY ranges:",
@@ -257,9 +475,9 @@ const PayWith = ({ variant }) => {
       // Constants for calculation
       const APY_SCALING_FACTOR = BigInt(10000); // APY is stored in basis points (e.g., 8000 for 80%)
 
-      // Calculate total rewards: (bnbAmount * APY * lockPeriod) / (oneYear * APY_SCALING_FACTOR)
+      // Calculate total rewards: (inputAmount * APY * lockPeriod) / (oneYear * APY_SCALING_FACTOR)
       const totalRewardBigInt =
-        (bnbAmount * selectedApy * selectedDuration) /
+        (inputAmount * selectedApy * selectedDuration) /
         (oneYear * APY_SCALING_FACTOR);
 
       console.log(
@@ -267,8 +485,8 @@ const PayWith = ({ variant }) => {
         totalRewardBigInt?.toString()
       );
 
-      // Convert to a more reasonable number by formatting with 18 decimals
-      const formattedReward = formatEther(totalRewardBigInt);
+      // Convert to a more reasonable number by formatting with 6 decimals for USDT
+      const formattedReward = formatUnits(totalRewardBigInt, 6);
       console.log("Reward calc - Formatted reward:", formattedReward);
 
       // Return with fixed decimal places for better readability
@@ -279,6 +497,7 @@ const PayWith = ({ variant }) => {
     }
   }, [
     input,
+    selectedPaymentMethod,
     selectedLockPeriod,
     apyRanges,
     sixMonths,
@@ -300,6 +519,12 @@ const PayWith = ({ variant }) => {
     }
 
     try {
+      // Get the input amount in proper decimals based on payment method
+      const inputAmount =
+        selectedPaymentMethod === "BNB"
+          ? parseEther(input)
+          : parseUnits(input, 6); // USDT has 6 decimals
+
       // Determine APY based on lock period selection
       let selectedApy;
 
@@ -312,22 +537,19 @@ const PayWith = ({ variant }) => {
       }
 
       // Log key values for debugging
-      console.log("Weekly reward calc - BNB amount:", input);
+      console.log("Weekly reward calc - Amount:", input);
       console.log(
         "Weekly reward calc - Selected APY:",
         selectedApy?.toString()
       );
 
-      // Get the input amount in BNB
-      const bnbAmount = parseEther(input);
-
       // Constants for calculation
       const WEEK_DURATION = BigInt(604800); // 1 week in seconds
       const APY_SCALING_FACTOR = BigInt(10000); // APY is stored in basis points
 
-      // Calculate weekly reward: (bnbAmount * apy * WEEK_DURATION) / (oneYear * scalingFactor)
+      // Calculate weekly reward: (inputAmount * apy * WEEK_DURATION) / (oneYear * scalingFactor)
       const weeklyRewardBigInt =
-        (bnbAmount * selectedApy * WEEK_DURATION) /
+        (inputAmount * selectedApy * WEEK_DURATION) /
         (oneYear * APY_SCALING_FACTOR);
 
       console.log(
@@ -335,8 +557,8 @@ const PayWith = ({ variant }) => {
         weeklyRewardBigInt?.toString()
       );
 
-      // Format the reward (assuming reward is in BNB - 18 decimals)
-      const formattedReward = formatEther(weeklyRewardBigInt);
+      // Format the reward with 6 decimals for USDT
+      const formattedReward = formatUnits(weeklyRewardBigInt, 6);
       console.log("Weekly reward calc - Formatted reward:", formattedReward);
 
       // Return with fixed decimal places for better readability
@@ -345,52 +567,24 @@ const PayWith = ({ variant }) => {
       console.error("Error calculating estimated weekly rewards:", error);
       return "Error"; // Indicate calculation error
     }
-  }, [input, apyRanges, oneYear, selectedLockPeriod, isContractDataLoading]);
-
-  // 1. Read staking token address from presale contract
-  const { data: stakingTokenAddress } = useReadContract({
-    address: PRESALE_ADDRESS,
-    abi: PRESALE_ABI,
-    functionName: "stakingToken",
-    chainId: 56,
-  });
-
-  // 2. Read decimals from staking token contract
-  const { data: tokenDecimalsRaw } = useReadContract({
-    address: stakingTokenAddress,
-    abi: [
-      {
-        inputs: [],
-        name: "decimals",
-        outputs: [{ internalType: "uint8", name: "", type: "uint8" }],
-        stateMutability: "view",
-        type: "function",
-      },
-    ],
-    functionName: "decimals",
-    chainId: 56,
-    query: { enabled: !!stakingTokenAddress },
-  });
-
-  // Always use this for DIGI decimals
-  const digiDecimals =
-    typeof tokenDecimalsRaw === "number" ? tokenDecimalsRaw : 8;
+  }, [
+    input,
+    selectedPaymentMethod,
+    selectedLockPeriod,
+    apyRanges,
+    oneYear,
+    isContractDataLoading,
+  ]);
 
   // --- Validation Effect ---
   useEffect(() => {
     setValidationMessage(""); // Clear previous message
-    if (
-      !input ||
-      isNaN(Number(input)) ||
-      Number(input) <= 0 ||
-      !tokensToGet ||
-      tokensToGet === "0"
-    ) {
+    if (!input || isNaN(Number(input)) || Number(input) <= 0) {
       return; // No validation needed for empty/zero input
     }
 
-    if (isLimitsLoading || isPriceLoading) {
-      return; // Wait for limits and price to load
+    if (isLimitsLoading || isPriceLoading || isUsdtPriceLoading) {
+      return; // Wait for limits and prices to load
     }
 
     // Simple guard against missing data
@@ -404,7 +598,6 @@ const PayWith = ({ variant }) => {
     }
 
     try {
-      // Use the correct decimals for DIGI
       const tokensToGetBigInt = parseUnits(tokensToGet, digiDecimals);
       const minFormatted = formatUnits(minStakeAmount, digiDecimals);
       const maxFormatted = formatUnits(maxStakeAmount, digiDecimals);
@@ -421,7 +614,7 @@ const PayWith = ({ variant }) => {
         setValidationMessage(`Maximum stake amount is ${readableMax} DIGI`);
       }
     } catch (e) {
-      // Don't show validation errors for technical issues
+      console.error("Error in validation:", e);
     }
   }, [
     input,
@@ -430,6 +623,7 @@ const PayWith = ({ variant }) => {
     maxStakeAmount,
     isLimitsLoading,
     isPriceLoading,
+    isUsdtPriceLoading,
     digiDecimals,
   ]);
 
@@ -451,40 +645,70 @@ const PayWith = ({ variant }) => {
     }
   }, []);
 
-  const handleBuyTokens = async () => {
-    const inputAmount = Number(input);
-    if (!input || isNaN(inputAmount) || inputAmount <= 0) {
-      console.error("Invalid input amount");
-      return;
-    }
-
-    if (!tokenPriceInBnb) {
-      console.error("Token price not available");
-      return;
-    }
-
-    // Use the referral address derived from the URL
-    const finalReferralAddress = urlReferralAddress;
+  const handleApproveUSDT = async () => {
+    if (!address || selectedPaymentMethod !== "USDT") return;
 
     try {
-      const valueToSend = parseEther(input);
+      setIsApprovalPending(true);
+      const inputAmount = parseUnits(input, 6); // USDT has 6 decimals
       await writeContract({
-        address: PRESALE_ADDRESS,
-        abi: PRESALE_ABI,
-        functionName: "buyTokens",
-        // Pass the referral address from URL state
-        args: [
-          parseEther(tokensToGet),
-          selectedLockPeriod,
-          finalReferralAddress,
-        ],
-        chainId: 56,
-        value: valueToSend,
+        address: USDT_ADDRESS,
+        abi: IERC20_ABI,
+        functionName: "approve",
+        args: [PRESALE_ADDRESS, inputAmount],
+        chainId: 97,
       });
     } catch (error) {
-      console.error("Error in handleBuyTokens catch block:", error);
+      console.error("Error approving USDT:", error);
+      setValidationMessage("Failed to approve USDT");
     } finally {
-      // Potentially reset buy state if needed, managed by useWriteContract's isPending
+      setIsApprovalPending(false);
+    }
+  };
+
+  const handleBuyTokens = async () => {
+    if (!address) return;
+
+    try {
+      // Calculate token amount from input payment
+      const tokenAmount = tokensToGet;
+      if (!tokenAmount || tokenAmount === "0") {
+        setValidationMessage("Invalid token amount");
+        return;
+      }
+
+      // Convert token amount to contract format
+      const inputAmount = parseUnits(tokenAmount, digiDecimals);
+
+      if (selectedPaymentMethod === "BNB") {
+        const bnbAmount = parseEther(input);
+        await writeContract({
+          address: PRESALE_ADDRESS,
+          abi: PRESALE_ABI,
+          functionName: "buyTokensWithBNB",
+          args: [inputAmount, selectedLockPeriod, urlReferralAddress],
+          value: bnbAmount,
+          chainId: 97,
+        });
+      } else {
+        const usdtAmount = parseUnits(input, 6);
+
+        if (!usdtAllowance || usdtAllowance < usdtAmount) {
+          setValidationMessage("Please approve USDT first");
+          return;
+        }
+
+        await writeContract({
+          address: PRESALE_ADDRESS,
+          abi: PRESALE_ABI,
+          functionName: "buyTokensWithUSDT",
+          args: [inputAmount, selectedLockPeriod, urlReferralAddress],
+          chainId: 97,
+        });
+      }
+    } catch (error) {
+      console.error("Error buying tokens:", error);
+      setValidationMessage("Failed to buy tokens");
     }
   };
 
@@ -524,10 +748,37 @@ const PayWith = ({ variant }) => {
 
   return (
     <PayWithStyleWrapper variant={variant}>
+      {contractError && (
+        <div
+          className="error-message"
+          style={{
+            color: "red",
+            padding: "10px",
+            marginBottom: "15px",
+            backgroundColor: "rgba(255, 0, 0, 0.1)",
+            borderRadius: "4px",
+            textAlign: "center",
+          }}
+        >
+          {contractError}
+        </div>
+      )}
       <form onSubmit={(e) => e.preventDefault()}>
         <div className="presale-item mb-30">
           <div className="presale-item-inner">
-            <label>Pay Amount (BNB)</label>
+            <label>Select Payment Method</label>
+            <Dropdown
+              options={PAYMENT_OPTIONS}
+              selectedValue={selectedPaymentMethod}
+              onSelect={(value) => setSelectedPaymentMethod(value)}
+              placeholder="Select Payment Method"
+            />
+          </div>
+        </div>
+
+        <div className="presale-item mb-30">
+          <div className="presale-item-inner">
+            <label>Pay Amount ({selectedPaymentMethod})</label>
             <input
               type="text"
               inputMode="decimal"
@@ -541,7 +792,15 @@ const PayWith = ({ variant }) => {
             <input
               type="text"
               placeholder="0"
-              value={isPriceLoading ? "Loading price..." : tokensToGet}
+              value={
+                selectedPaymentMethod === "BNB"
+                  ? isPriceLoading
+                    ? "Loading price..."
+                    : tokensToGet
+                  : isUsdtPriceLoading
+                  ? "Loading price..."
+                  : tokensToGet
+              }
               disabled
             />
           </div>
@@ -550,7 +809,7 @@ const PayWith = ({ variant }) => {
         {/* Display Estimated Weekly Rewards */}
         <div className="presale-item mb-30">
           <div className="presale-item-inner">
-            <label>Est. Weekly Rewards (BNB)</label>
+            <label>Est. Weekly Rewards (USDT)</label>
             <input
               type="text"
               placeholder="0"
@@ -571,7 +830,7 @@ const PayWith = ({ variant }) => {
         {/* Display Estimated Rewards */}
         <div className="presale-item mb-30">
           <div className="presale-item-inner">
-            <label>Est. Total Rewards (BNB)</label>
+            <label>Est. Total Rewards (USDT)</label>
             <input
               type="text"
               placeholder="0"
@@ -664,26 +923,36 @@ const PayWith = ({ variant }) => {
       {/* Button Row */}
       <div
         className="button-row"
-        style={{ display: "flex", gap: "15px", marginTop: "20px" }}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "15px",
+          marginTop: "20px",
+        }}
       >
-        {/* Buy Now Button */}
+        {selectedPaymentMethod === "USDT" && (
+          <button
+            className="presale-item-btn"
+            onClick={handleApproveUSDT}
+            disabled={!isConnected || isApprovalPending || isWritePending}
+          >
+            {isApprovalPending ? "Approving..." : "Approve USDT"}
+          </button>
+        )}
+
         <button
           className="presale-item-btn"
           onClick={handleMainButtonClick}
           disabled={isConnected ? isButtonDisabled : false}
-          style={{ flex: 1, margin: 0 }} // Use flex: 1 to share space
         >
-          {isPriceLoading
-            ? "Loading Price..."
-            : isWritePending
-            ? "Check Wallet..."
-            : !isConnected
+          {!isConnected
             ? "Connect Wallet"
-            : "Buy now"}
+            : isWritePending
+            ? "Processing..."
+            : `Buy with ${selectedPaymentMethod}`}
         </button>
       </div>
 
-      {/* Display Validation Message - Below button row */}
       {validationMessage && (
         <p
           className="validation-message"

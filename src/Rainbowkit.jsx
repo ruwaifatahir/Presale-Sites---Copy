@@ -6,7 +6,7 @@ import {
   RainbowKitProvider,
 } from "@rainbow-me/rainbowkit";
 import { WagmiProvider } from "wagmi";
-import { bsc } from "wagmi/chains";
+import { bscTestnet } from "wagmi/chains";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import {
   argentWallet,
@@ -53,7 +53,7 @@ const connectors = connectorsForWallets(
 const config = getDefaultConfig({
   appName: "My RainbowKit App",
   projectId: projectId,
-  chains: [bsc],
+  chains: [bscTestnet],
   connectors,
 });
 
@@ -64,7 +64,7 @@ const Rainbowkit = ({ children }) => {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
-          initialChain={bsc}
+          initialChain={bscTestnet}
           modalSize="compact" //wide,compact
           theme={darkTheme({
             accentColor: "rgba(255, 255, 255, 0.2)",

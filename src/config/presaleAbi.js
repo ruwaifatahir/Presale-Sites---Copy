@@ -2,7 +2,9 @@ export const PRESALE_ABI = [
   {
     inputs: [
       { internalType: "address", name: "_stakingToken", type: "address" },
+      { internalType: "address", name: "_usdtToken", type: "address" },
       { internalType: "uint256", name: "_baseTokenPrice", type: "uint256" },
+      { internalType: "uint256", name: "_baseTokenPriceUSDT", type: "uint256" },
       { internalType: "address", name: "initialOwner", type: "address" },
     ],
     stateMutability: "nonpayable",
@@ -29,6 +31,25 @@ export const PRESALE_ABI = [
       },
     ],
     name: "APYUpdated",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "newBaseTokenPrice",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "newBaseTokenPriceUSDT",
+        type: "uint256",
+      },
+    ],
+    name: "BaseTokenPriceUpdated",
     type: "event",
   },
   {
@@ -259,14 +280,32 @@ export const PRESALE_ABI = [
     type: "function",
   },
   {
+    inputs: [],
+    name: "baseTokenPriceUSDT",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [
       { internalType: "uint256", name: "amount", type: "uint256" },
       { internalType: "uint8", name: "lockOption", type: "uint8" },
       { internalType: "address", name: "referrer", type: "address" },
     ],
-    name: "buyTokens",
+    name: "buyTokensWithBNB",
     outputs: [],
     stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "amount", type: "uint256" },
+      { internalType: "uint8", name: "lockOption", type: "uint8" },
+      { internalType: "address", name: "referrer", type: "address" },
+    ],
+    name: "buyTokensWithUSDT",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
@@ -311,6 +350,13 @@ export const PRESALE_ABI = [
     type: "function",
   },
   {
+    inputs: [{ internalType: "uint256", name: "amount", type: "uint256" }],
+    name: "fundContractUSDT",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
     inputs: [{ internalType: "uint256", name: "lockPeriod", type: "uint256" }],
     name: "getAPY",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
@@ -320,6 +366,13 @@ export const PRESALE_ABI = [
   {
     inputs: [],
     name: "getCurrentTokenPrice",
+    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getCurrentTokenPriceUSDT",
     outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
     stateMutability: "view",
     type: "function",
@@ -535,6 +588,36 @@ export const PRESALE_ABI = [
     name: "updateStakingToken",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      { internalType: "uint256", name: "newBaseTokenPrice", type: "uint256" },
+      {
+        internalType: "uint256",
+        name: "newBaseTokenPriceUSDT",
+        type: "uint256",
+      },
+    ],
+    name: "updateTokenPrices",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ internalType: "address", name: "_usdtToken", type: "address" }],
+    name: "updateUSDTToken",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "usdtToken",
+    outputs: [
+      { internalType: "contract IERC20Extended", name: "", type: "address" },
+    ],
+    stateMutability: "view",
     type: "function",
   },
   {

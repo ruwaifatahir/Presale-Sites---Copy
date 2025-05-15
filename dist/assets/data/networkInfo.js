@@ -7,14 +7,14 @@ const Data = [
     icon: Icon1,
     title: "Buy With USDT",
     name: "BNB Smart Chain Testnet",
-    chainId: 56,
+    chainId: 97,
   },
   {
     id: 2,
     icon: Icon2,
     title: "BUY WITH BNB",
     name: "BNB Smart Chain Testnet",
-    chainId: 56,
+    chainId: 97,
   },
 ];
 

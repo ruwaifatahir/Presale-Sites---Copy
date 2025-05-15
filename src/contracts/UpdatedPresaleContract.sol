@@ -2,12 +2,14 @@ contract PresaleStakingContract is Ownable, ReentrancyGuard {
     using SafeMath for uint256;
 
     IERC20Extended public stakingToken;
+    IERC20Extended public usdtToken;
 
     // Presale variables
     uint256 public constant PRICE_INCREASE_INTERVAL = 172800 minutes; // 120 days for production
     uint256 public constant PRICE_INCREASE_PERCENT = 1; // 1%
     uint256 public startTime;
     uint256 public baseTokenPrice;
+    uint256 public baseTokenPriceUSDT;
 
     // Staking variables
     struct Stake {
@@ -38,19 +40,53 @@ contract PresaleStakingContract is Ownable, ReentrancyGuard {
 
     uint256[6] public stakingReferralPercentages = [30, 20, 10, 5, 5, 5];
 
-    event Staked(address indexed user, uint256 amount, uint256 lockPeriod, uint256 stakeIndex, address referrer);
-    event RewardsClaimed(address indexed user, uint256 amount, uint256 stakeIndex);
-    event StakingReferralRewardsDistributed(address indexed referrer, uint256 amount, uint256 level);
+    event Staked(
+        address indexed user,
+        uint256 amount,
+        uint256 lockPeriod,
+        uint256 stakeIndex,
+        address referrer
+    );
+    event RewardsClaimed(
+        address indexed user,
+        uint256 amount,
+        uint256 stakeIndex
+    );
+    event StakingReferralRewardsDistributed(
+        address indexed referrer,
+        uint256 amount,
+        uint256 level
+    );
     event Withdrawn(address indexed user, uint256 amount, uint256 stakeIndex);
-    event TokensPurchased(address indexed buyer, uint256 amount, uint256 totalCost);
+    event TokensPurchased(
+        address indexed buyer,
+        uint256 amount,
+        uint256 totalCost
+    );
     event APYUpdated(uint256[3] newAPYRanges);
-    event LockPeriodsUpdated(uint256 sixMonths, uint256 oneYear, uint256 twoYears);
+    event LockPeriodsUpdated(
+        uint256 sixMonths,
+        uint256 oneYear,
+        uint256 twoYears
+    );
     event MinStakeAmountUpdated(uint256 newMinStakeAmount);
     event MaxStakeAmountUpdated(uint256 newMaxStakeAmount);
+    event BaseTokenPriceUpdated(
+        uint256 newBaseTokenPrice,
+        uint256 newBaseTokenPriceUSDT
+    );
 
-    constructor(address _stakingToken, uint256 _baseTokenPrice, address initialOwner) Ownable(initialOwner) {
+    constructor(
+        address _stakingToken,
+        address _usdtToken,
+        uint256 _baseTokenPrice,
+        uint256 _baseTokenPriceUSDT,
+        address initialOwner
+    ) Ownable(initialOwner) {
         stakingToken = IERC20Extended(_stakingToken);
+        usdtToken = IERC20Extended(_usdtToken);
         baseTokenPrice = _baseTokenPrice;
+        baseTokenPriceUSDT = _baseTokenPriceUSDT;
         startTime = block.timestamp;
 
         uint8 decimals = stakingToken.decimals();
@@ -59,21 +95,43 @@ contract PresaleStakingContract is Ownable, ReentrancyGuard {
     }
 
     function getCurrentTokenPrice() public view returns (uint256) {
-        uint256 intervalsPassed = (block.timestamp - startTime) / PRICE_INCREASE_INTERVAL;
-        uint256 priceIncrease = baseTokenPrice.mul(intervalsPassed).mul(PRICE_INCREASE_PERCENT).div(100);
+        uint256 intervalsPassed = (block.timestamp - startTime) /
+            PRICE_INCREASE_INTERVAL;
+        uint256 priceIncrease = baseTokenPrice
+            .mul(intervalsPassed)
+            .mul(PRICE_INCREASE_PERCENT)
+            .div(100);
         return baseTokenPrice.add(priceIncrease);
     }
 
-    function buyTokens(uint256 amount, uint8 lockOption, address referrer) external payable nonReentrant {
+    function getCurrentTokenPriceUSDT() public view returns (uint256) {
+        uint256 intervalsPassed = (block.timestamp - startTime) /
+            PRICE_INCREASE_INTERVAL;
+        uint256 priceIncrease = baseTokenPriceUSDT
+            .mul(intervalsPassed)
+            .mul(PRICE_INCREASE_PERCENT)
+            .div(100);
+        return baseTokenPriceUSDT.add(priceIncrease);
+    }
+
+    function buyTokensWithBNB(
+        uint256 amount,
+        uint8 lockOption,
+        address referrer
+    ) external payable nonReentrant {
         require(amount >= minStakeAmount, "Amount below minimum stake");
         require(amount <= maxStakeAmount, "Amount above maximum stake");
         require(lockOption <= 2, "Invalid lock option");
         require(referrer != msg.sender, "Cannot refer yourself");
-        require(stakingToken.balanceOf(address(this)) >= amount, "Not enough tokens in contract");
+        require(
+            stakingToken.balanceOf(address(this)) >= amount,
+            "Not enough tokens in contract"
+        );
 
-        uint256 currentPrice = getCurrentTokenPrice();
         uint8 decimals = stakingToken.decimals();
-        uint256 totalCost = currentPrice.mul(amount).div(10**decimals);
+        uint256 totalCost = getCurrentTokenPrice().mul(amount).div(
+            10 ** decimals
+        );
         require(msg.value >= totalCost, "Insufficient BNB sent");
 
         if (msg.value > totalCost) {
@@ -84,78 +142,136 @@ contract PresaleStakingContract is Ownable, ReentrancyGuard {
         emit TokensPurchased(msg.sender, amount, totalCost);
     }
 
-    function _stake(address user, uint256 amount, uint8 lockOption, address referrer) internal {
+    function buyTokensWithUSDT(
+        uint256 amount,
+        uint8 lockOption,
+        address referrer
+    ) external nonReentrant {
+        require(amount >= minStakeAmount, "Amount below minimum stake");
+        require(amount <= maxStakeAmount, "Amount above maximum stake");
+        require(lockOption <= 2, "Invalid lock option");
+        require(referrer != msg.sender, "Cannot refer yourself");
+        require(
+            stakingToken.balanceOf(address(this)) >= amount,
+            "Not enough tokens in contract"
+        );
+
+        uint8 decimals = stakingToken.decimals();
+        uint256 totalCost = getCurrentTokenPriceUSDT().mul(amount).div(
+            10 ** decimals
+        );
+
+        require(
+            usdtToken.transferFrom(msg.sender, address(this), totalCost),
+            "USDT transfer failed"
+        );
+
+        _stake(msg.sender, amount, lockOption, referrer);
+        emit TokensPurchased(msg.sender, amount, totalCost);
+    }
+
+    function _stake(
+        address user,
+        uint256 amount,
+        uint8 lockOption,
+        address referrer
+    ) internal {
         uint256 lockPeriod;
         if (lockOption == 0) lockPeriod = sixMonths;
         else if (lockOption == 1) lockPeriod = oneYear;
         else if (lockOption == 2) lockPeriod = twoYears;
         else revert("Invalid lock option");
 
-        stakes[user].push(Stake({
-            amount: amount,
-            stakingStartTime: block.timestamp,
-            lockPeriod: lockPeriod,
-            claimedRewards: 0,
-            withdrawn: false,
-            lastClaimTime: block.timestamp,
-            withdrawalStartTime: 0,
-            withdrawnPercentage: 0,
-            referrer: referrer
-        }));
+        stakes[user].push(
+            Stake({
+                amount: amount,
+                stakingStartTime: block.timestamp,
+                lockPeriod: lockPeriod,
+                claimedRewards: 0,
+                withdrawn: false,
+                lastClaimTime: block.timestamp,
+                withdrawalStartTime: 0,
+                withdrawnPercentage: 0,
+                referrer: referrer
+            })
+        );
 
         if (referrer != address(0) && stakingReferrer[user] == address(0)) {
             stakingReferrals[referrer].push(user);
             stakingReferrer[user] = referrer;
         }
 
-        emit Staked(user, amount, lockPeriod, stakes[user].length - 1, referrer);
+        emit Staked(
+            user,
+            amount,
+            lockPeriod,
+            stakes[user].length - 1,
+            referrer
+        );
     }
 
-    function calculateRewards(address user, uint256 stakeIndex) public view returns (uint256) {
-    Stake memory userStake = stakes[user][stakeIndex];
-    if (userStake.amount == 0 || userStake.withdrawn) return 0;
+    function calculateRewards(
+        address user,
+        uint256 stakeIndex
+    ) public view returns (uint256) {
+        Stake memory userStake = stakes[user][stakeIndex];
+        if (userStake.amount == 0 || userStake.withdrawn) return 0;
 
-    uint256 endTime = userStake.stakingStartTime.add(userStake.lockPeriod);
-    uint256 calculationTime = block.timestamp > endTime ? endTime : block.timestamp;
-    
-    if (calculationTime <= userStake.lastClaimTime) return 0;
+        uint256 endTime = userStake.stakingStartTime.add(userStake.lockPeriod);
+        uint256 calculationTime = block.timestamp > endTime
+            ? endTime
+            : block.timestamp;
 
-    uint256 stakingDuration = calculationTime.sub(userStake.lastClaimTime);
-    uint256 fullWeeks = stakingDuration.div(WEEK);
-    if (fullWeeks == 0) return 0;
+        if (calculationTime <= userStake.lastClaimTime) return 0;
 
-    uint256 apy = getAPY(userStake.lockPeriod);
-    uint256 effectiveDuration = fullWeeks.mul(WEEK);
-    uint256 secondsInYear = oneYear;
-    uint256 rewards = userStake.amount
-        .mul(apy)
-        .mul(effectiveDuration)
-        .div(secondsInYear.mul(10000));
-    
-    // Ensure at least 1 wei reward per full week to prevent dust
-    return rewards > 0 ? rewards : fullWeeks;
-}
+        uint256 stakingDuration = calculationTime.sub(userStake.lastClaimTime);
+        uint256 fullWeeks = stakingDuration.div(WEEK);
+        if (fullWeeks == 0) return 0;
+
+        uint256 apy = getAPY(userStake.lockPeriod);
+        uint256 effectiveDuration = fullWeeks.mul(WEEK);
+        uint256 secondsInYear = oneYear;
+        uint256 rewards = userStake.amount.mul(apy).mul(effectiveDuration).div(
+            secondsInYear.mul(10000)
+        );
+
+        // Ensure at least 1 wei reward per full week to prevent dust
+        return rewards > 0 ? rewards : fullWeeks;
+    }
 
     function claimRewards(uint256 stakeIndex) external nonReentrant {
         require(stakeIndex < stakes[msg.sender].length, "Invalid stake index");
         Stake storage userStake = stakes[msg.sender][stakeIndex];
         require(!userStake.withdrawn, "Stake already withdrawn");
-        require(block.timestamp >= userStake.lastClaimTime + WEEK, "Can claim rewards weekly");
+        require(
+            block.timestamp >= userStake.lastClaimTime + WEEK,
+            "Can claim rewards weekly"
+        );
 
         uint256 rewards = calculateRewards(msg.sender, stakeIndex);
         require(rewards > 0, "No rewards to claim");
-        require(address(this).balance >= rewards, "Insufficient contract BNB balance");
+        require(
+            usdtToken.balanceOf(address(this)) >= rewards,
+            "Insufficient USDT balance"
+        );
 
         address currentReferrer = userStake.referrer;
         uint256 level = 0;
         uint256 totalReferralRewards = 0;
 
         while (currentReferrer != address(0) && level < 6) {
-            uint256 referralReward = (rewards * stakingReferralPercentages[level]) / 100;
+            uint256 referralReward = (rewards *
+                stakingReferralPercentages[level]) / 100;
             if (referralReward > 0) {
-                stakingReferralRewards[currentReferrer] = stakingReferralRewards[currentReferrer].add(referralReward);
+                stakingReferralRewards[
+                    currentReferrer
+                ] = stakingReferralRewards[currentReferrer].add(referralReward);
                 totalReferralRewards = totalReferralRewards.add(referralReward);
-                emit StakingReferralRewardsDistributed(currentReferrer, referralReward, level + 1);
+                emit StakingReferralRewardsDistributed(
+                    currentReferrer,
+                    referralReward,
+                    level + 1
+                );
             }
             currentReferrer = stakingReferrer[currentReferrer];
             level++;
@@ -165,31 +281,47 @@ contract PresaleStakingContract is Ownable, ReentrancyGuard {
         uint256 fullWeeks = (block.timestamp - userStake.lastClaimTime) / WEEK;
         userStake.lastClaimTime = userStake.lastClaimTime.add(fullWeeks * WEEK);
 
-        // Transfer rewards after all state changes
-        payable(msg.sender).transfer(rewards);
+        // Transfer rewards in USDT after all state changes
+        require(
+            usdtToken.transfer(msg.sender, rewards),
+            "USDT transfer failed"
+        );
         emit RewardsClaimed(msg.sender, rewards, stakeIndex);
     }
 
     function withdrawStakingReferralRewards() external nonReentrant {
         uint256 rewards = stakingReferralRewards[msg.sender];
         require(rewards > 0, "No staking referral rewards");
-        require(address(this).balance >= rewards, "Insufficient contract BNB balance");
-        
+        require(
+            usdtToken.balanceOf(address(this)) >= rewards,
+            "Insufficient USDT balance"
+        );
+
         stakingReferralRewards[msg.sender] = 0;
-        payable(msg.sender).transfer(rewards);
+        require(
+            usdtToken.transfer(msg.sender, rewards),
+            "USDT transfer failed"
+        );
     }
 
     function withdraw(uint256 stakeIndex) external nonReentrant {
         require(stakeIndex < stakes[msg.sender].length, "Invalid stake index");
         Stake storage userStake = stakes[msg.sender][stakeIndex];
         require(!userStake.withdrawn, "Fully withdrawn");
-        require(block.timestamp >= userStake.stakingStartTime + userStake.lockPeriod, "Lock period not over");
+        require(
+            block.timestamp >=
+                userStake.stakingStartTime + userStake.lockPeriod,
+            "Lock period not over"
+        );
 
         if (userStake.withdrawalStartTime == 0) {
-            userStake.withdrawalStartTime = userStake.stakingStartTime + userStake.lockPeriod;
+            userStake.withdrawalStartTime =
+                userStake.stakingStartTime +
+                userStake.lockPeriod;
         }
 
-        uint256 timeSinceWithdrawalStart = block.timestamp - userStake.withdrawalStartTime;
+        uint256 timeSinceWithdrawalStart = block.timestamp -
+            userStake.withdrawalStartTime;
         uint256 weeksPassed = timeSinceWithdrawalStart / WEEK;
         uint256 allowedPercentage = weeksPassed * 10;
 
@@ -197,10 +329,15 @@ contract PresaleStakingContract is Ownable, ReentrancyGuard {
             allowedPercentage = 100;
         }
 
-        require(allowedPercentage > userStake.withdrawnPercentage, "No new amount available");
+        require(
+            allowedPercentage > userStake.withdrawnPercentage,
+            "No new amount available"
+        );
 
-        uint256 withdrawablePercentage = allowedPercentage - userStake.withdrawnPercentage;
-        uint256 amountToWithdraw = (userStake.amount * withdrawablePercentage) / 100;
+        uint256 withdrawablePercentage = allowedPercentage -
+            userStake.withdrawnPercentage;
+        uint256 amountToWithdraw = (userStake.amount * withdrawablePercentage) /
+            100;
 
         userStake.amount = userStake.amount.sub(amountToWithdraw);
         userStake.withdrawnPercentage = allowedPercentage;
@@ -209,8 +346,14 @@ contract PresaleStakingContract is Ownable, ReentrancyGuard {
             userStake.withdrawn = true;
         }
 
-        require(stakingToken.balanceOf(address(this)) >= amountToWithdraw, "Insufficient token balance");
-        require(stakingToken.transfer(msg.sender, amountToWithdraw), "Transfer failed");
+        require(
+            stakingToken.balanceOf(address(this)) >= amountToWithdraw,
+            "Insufficient token balance"
+        );
+        require(
+            stakingToken.transfer(msg.sender, amountToWithdraw),
+            "Transfer failed"
+        );
         emit Withdrawn(msg.sender, amountToWithdraw, stakeIndex);
     }
 
@@ -226,45 +369,96 @@ contract PresaleStakingContract is Ownable, ReentrancyGuard {
         }
     }
 
-    function getUserStakes(address user) external view returns (Stake[] memory) {
+    function getUserStakes(
+        address user
+    ) external view returns (Stake[] memory) {
         return stakes[user];
     }
 
-    function getStakingReferrals(address user) external view returns (address[] memory) {
+    function getStakingReferrals(
+        address user
+    ) external view returns (address[] memory) {
         return stakingReferrals[user];
     }
 
     function fundContractTokens(uint256 amount) external onlyOwner {
-        require(stakingToken.transferFrom(msg.sender, address(this), amount), "Transfer failed");
+        require(
+            stakingToken.transferFrom(msg.sender, address(this), amount),
+            "Transfer failed"
+        );
+    }
+
+    function fundContractUSDT(uint256 amount) external onlyOwner {
+        require(
+            usdtToken.transferFrom(msg.sender, address(this), amount),
+            "USDT transfer failed"
+        );
     }
 
     function updateAPY(uint256[3] calldata newAPYRanges) external onlyOwner {
-        require(newAPYRanges[0] <= 10000 && newAPYRanges[1] <= 15000 && newAPYRanges[2] <= 20000, "APY too high");
+        require(
+            newAPYRanges[0] <= 10000 &&
+                newAPYRanges[1] <= 15000 &&
+                newAPYRanges[2] <= 20000,
+            "APY too high"
+        );
         apyRanges = newAPYRanges;
         emit APYUpdated(newAPYRanges);
     }
 
-    function updateLockPeriods(uint256 newSixMonths, uint256 newOneYear, uint256 newTwoYears) external onlyOwner {
-        require(newSixMonths >= 12 weeks && newSixMonths <= 30 weeks, "Invalid 6-month period");
-        require(newOneYear >= 40 weeks && newOneYear <= 60 weeks, "Invalid 1-year period");
-        require(newTwoYears >= 90 weeks && newTwoYears <= 120 weeks, "Invalid 2-year period");
-        
+    function updateLockPeriods(
+        uint256 newSixMonths,
+        uint256 newOneYear,
+        uint256 newTwoYears
+    ) external onlyOwner {
+        require(
+            newSixMonths >= 12 weeks && newSixMonths <= 30 weeks,
+            "Invalid 6-month period"
+        );
+        require(
+            newOneYear >= 40 weeks && newOneYear <= 60 weeks,
+            "Invalid 1-year period"
+        );
+        require(
+            newTwoYears >= 90 weeks && newTwoYears <= 120 weeks,
+            "Invalid 2-year period"
+        );
+
         sixMonths = newSixMonths;
         oneYear = newOneYear;
         twoYears = newTwoYears;
         emit LockPeriodsUpdated(newSixMonths, newOneYear, newTwoYears);
     }
 
-    function updateMinStakeAmount(uint256 newMinStakeAmount) external onlyOwner {
-        require(newMinStakeAmount > 0 && newMinStakeAmount < maxStakeAmount, "Invalid min amount");
+    function updateMinStakeAmount(
+        uint256 newMinStakeAmount
+    ) external onlyOwner {
+        require(
+            newMinStakeAmount > 0 && newMinStakeAmount < maxStakeAmount,
+            "Invalid min amount"
+        );
         minStakeAmount = newMinStakeAmount;
         emit MinStakeAmountUpdated(newMinStakeAmount);
     }
 
-    function updateMaxStakeAmount(uint256 newMaxStakeAmount) external onlyOwner {
-        require(newMaxStakeAmount > minStakeAmount, "Max must be greater than min");
+    function updateMaxStakeAmount(
+        uint256 newMaxStakeAmount
+    ) external onlyOwner {
+        require(
+            newMaxStakeAmount > minStakeAmount,
+            "Max must be greater than min"
+        );
         maxStakeAmount = newMaxStakeAmount;
         emit MaxStakeAmountUpdated(newMaxStakeAmount);
+    }
+
+    function updateTokenPrices(
+        uint256 newBaseTokenPrice,
+        uint256 newBaseTokenPriceUSDT
+    ) external onlyOwner {
+        baseTokenPrice = newBaseTokenPrice;
+        baseTokenPriceUSDT = newBaseTokenPriceUSDT;
+        emit BaseTokenPriceUpdated(newBaseTokenPrice, newBaseTokenPriceUSDT);
     }
 
     function updateStakingToken(address _stakingToken) external onlyOwner {
@@ -272,8 +466,19 @@ contract PresaleStakingContract is Ownable, ReentrancyGuard {
         stakingToken = IERC20Extended(_stakingToken);
     }
 
-    function emergencyWithdrawTokens(address token, uint256 amount) external onlyOwner {
-        require(token != address(stakingToken) || stakes[msg.sender].length == 0, "Cannot withdraw staking token while staking");
+    function updateUSDTToken(address _usdtToken) external onlyOwner {
+        require(_usdtToken != address(0), "Invalid token address");
+        usdtToken = IERC20Extended(_usdtToken);
+    }
+
+    function emergencyWithdrawTokens(
+        address token,
+        uint256 amount
+    ) external onlyOwner {
+        require(
+            token != address(stakingToken) || stakes[msg.sender].length == 0,
+            "Cannot withdraw staking token while staking"
+        );
         IERC20(token).transfer(owner(), amount);
     }
 

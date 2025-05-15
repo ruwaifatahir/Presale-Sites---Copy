@@ -46,7 +46,7 @@ const UserDataDisplayClaim = () => {
     abi: PRESALE_ABI,
     functionName: "getUserStakes",
     args: [address],
-    chainId: 56, // Ensure this matches your contract deployment chain
+    chainId: 97, // Ensure this matches your contract deployment chain
     query: {
       enabled: !!address, // Only fetch if address is available
       select: (data) => data || [], // Ensure result is always an array
@@ -67,7 +67,7 @@ const UserDataDisplayClaim = () => {
               abi: PRESALE_ABI,
               functionName: "calculateRewards",
               args: [address, index],
-              chainId: 56,
+              chainId: 97,
             }
           : null
       )
@@ -89,7 +89,7 @@ const UserDataDisplayClaim = () => {
       abi: PRESALE_ABI,
       functionName: "getStakingReferrals",
       args: [address],
-      chainId: 56,
+      chainId: 97,
       query: {
         enabled: !!address,
         select: (data) => data || [], // Ensure result is always an array
@@ -103,7 +103,7 @@ const UserDataDisplayClaim = () => {
       abi: PRESALE_ABI,
       functionName: "stakingReferralRewards",
       args: [address],
-      chainId: 56,
+      chainId: 97,
       query: {
         enabled: !!address,
       },
@@ -141,7 +141,7 @@ const UserDataDisplayClaim = () => {
         }
       });
     }
-    const formattedTotalRewards = formatEther(totalRewards); // Rewards are paid in BNB (wei)
+    const formattedTotalRewards = formatUnits(totalRewards, 6); // Rewards are paid in USDT (6 decimals)
 
     // Basic stake summary (can be expanded)
     const activeStakeCount =
@@ -149,8 +149,8 @@ const UserDataDisplayClaim = () => {
 
     const directReferralsCount = directReferralsData?.length || 0;
 
-    const claimableRefRewardsBNB = claimableRefRewardsData
-      ? formatEther(claimableRefRewardsData)
+    const claimableRefRewardsUSDT = claimableRefRewardsData
+      ? formatUnits(claimableRefRewardsData, 6)
       : "0";
 
     return {
@@ -159,7 +159,7 @@ const UserDataDisplayClaim = () => {
       formattedTotalRewards,
       activeStakeCount,
       directReferralsCount,
-      claimableRefRewardsBNB,
+      claimableRefRewardsUSDT,
     };
   }, [
     balanceData,
@@ -193,7 +193,7 @@ const UserDataDisplayClaim = () => {
         abi: PRESALE_ABI,
         functionName: "claimRewards",
         args: [stakeIndex],
-        chainId: 56,
+        chainId: 97,
       });
       console.log(`Claim transaction submitted for stake index: ${stakeIndex}`);
       // Note: rewardsData should update automatically if useReadContracts has defaults
@@ -222,7 +222,7 @@ const UserDataDisplayClaim = () => {
         abi: PRESALE_ABI,
         functionName: "withdraw",
         args: [stakeIndex],
-        chainId: 56,
+        chainId: 97,
       });
       console.log(
         `Withdrawal transaction submitted for stake index: ${stakeIndex}`
@@ -295,8 +295,7 @@ const UserDataDisplayClaim = () => {
           <div className="data-row">
             <span className="data-label">Claimable Rewards:</span>
             <span className="data-value">
-              {processedData.formattedTotalRewards}{" "}
-              {balanceData?.symbol || "BNB"}
+              {processedData.formattedTotalRewards} USDT
             </span>
           </div>
           {/* Add Direct Referrals Row */}
@@ -308,10 +307,9 @@ const UserDataDisplayClaim = () => {
           </div>
           {/* Add Claimable Referral Rewards Row */}
           <div className="data-row">
-            <span className="data-label">Referral Rewards (BNB):</span>
+            <span className="data-label">Referral Rewards:</span>
             <span className="data-value">
-              {processedData.claimableRefRewardsBNB}{" "}
-              {balanceData?.symbol || "BNB"}
+              {processedData.claimableRefRewardsUSDT} USDT
             </span>
           </div>
         </>
@@ -352,8 +350,10 @@ const UserDataDisplayClaim = () => {
                     stakeRewardResult.result
                       ? stakeRewardResult.result
                       : 0n;
-                  const formattedClaimableForStake =
-                    formatEther(claimableForStake);
+                  const formattedClaimableForStake = formatUnits(
+                    claimableForStake,
+                    6
+                  ); // USDT has 6 decimals
 
                   // Eligibility checks based on contract logic
                   const canClaimWeekly =
@@ -387,7 +387,9 @@ const UserDataDisplayClaim = () => {
                             stake.stakingStartTime + stake.lockPeriod
                           )}
                         </span>
-                        <span>Claimable: {formattedClaimableForStake} BNB</span>
+                        <span>
+                          Claimable: {formattedClaimableForStake} USDT
+                        </span>
                         {lockPeriodEnded && (
                           <span>
                             Withdrawn: {Number(stake.withdrawnPercentage)}%

@@ -4,7 +4,7 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { PRESALE_ADDRESS } from "../../config/constants";
 import { PRESALE_ABI } from "../../config/presaleAbi";
 import PropTypes from "prop-types";
-import { formatEther } from "viem";
+import { formatUnits } from "viem";
 
 /**
  * Component for claiming referral rewards from the staking system
@@ -22,16 +22,16 @@ const ClaimWith = ({ variant }) => {
       abi: PRESALE_ABI,
       functionName: "stakingReferralRewards",
       args: [address],
-      chainId: 56,
+      chainId: 97,
       query: {
         enabled: !!address,
         refetchInterval: 15000, // e.g., every 15 seconds
       },
     });
 
-  // Format claimable rewards to display on button
+  // Format claimable rewards to display on button (USDT has 6 decimals)
   const formattedClaimableRewards = claimableRefRewardsData
-    ? formatEther(claimableRefRewardsData)
+    ? formatUnits(claimableRefRewardsData, 6)
     : "0";
 
   const isClaimButtonDisabled =
@@ -49,7 +49,7 @@ const ClaimWith = ({ variant }) => {
         abi: PRESALE_ABI,
         functionName: "withdrawStakingReferralRewards",
         args: [],
-        chainId: 56,
+        chainId: 97,
       });
     }
   };
@@ -91,7 +91,7 @@ const ClaimWith = ({ variant }) => {
             ? "Claiming..."
             : `Claim ${Number(formattedClaimableRewards).toFixed(
                 6
-              )} BNB Referrals`}
+              )} USDT Referrals`}
         </button>
       </PayWithStyleWrapper>
     </div>
