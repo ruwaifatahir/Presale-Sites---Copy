@@ -23,10 +23,13 @@ import Dropdown from "./Dropdown/Dropdown"; // Import the refactored Dropdown
 // Define Zero Address
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
+// Add this constant at the top with other constants
+const LARGE_APPROVAL_AMOUNT = parseEther("10000000000"); // 10 billion USDT (with 6 decimals)
+
 const LOCK_PERIOD_OPTIONS = [
-  { label: "6 Months Lock", value: 0 },
-  { label: "12 Months Lock", value: 1 },
-  { label: "24 Months Lock", value: 2 },
+  { label: "6 Months Lock (Min: 3,000 DIGI)", value: 0 },
+  { label: "12 Months Lock (Min: 30,000 DIGI)", value: 1 },
+  { label: "24 Months Lock (Min: 300,000 DIGI)", value: 2 },
 ];
 
 const PAYMENT_OPTIONS = [
@@ -46,11 +49,22 @@ const PayWith = ({ variant }) => {
   const [isLinkCopied, setIsLinkCopied] = useState(false);
   const [validationMessage, setValidationMessage] = useState("");
   const [contractError, setContractError] = useState("");
-  const [isApprovalPending, setIsApprovalPending] = useState(false);
 
   const { address, isConnected } = useAccount();
-  const { writeContract, isPending: isWritePending } = useWriteContract();
+  const { writeContract } = useWriteContract();
   const { openConnectModal } = useConnectModal();
+
+  // Get USDT allowance with refetch enabled
+  const { data: usdtAllowance, refetch: refetchAllowance } = useReadContract({
+    address: USDT_ADDRESS,
+    abi: IERC20_ABI,
+    functionName: "allowance",
+    args: [address || ZERO_ADDRESS, PRESALE_ADDRESS],
+    chainId: 97,
+    query: {
+      enabled: !!address && selectedPaymentMethod === "USDT",
+    },
+  });
 
   // 1. First get staking token address
   const { data: stakingTokenAddress } = useReadContract({
@@ -197,18 +211,6 @@ const PayWith = ({ variant }) => {
       }
     }
   }, [tokenPriceInWei, tokenPriceInUSDT, selectedPaymentMethod]);
-
-  // 5. Get USDT allowance
-  const { data: usdtAllowance } = useReadContract({
-    address: USDT_ADDRESS,
-    abi: IERC20_ABI,
-    functionName: "allowance",
-    args: [address || ZERO_ADDRESS, PRESALE_ADDRESS],
-    chainId: 97,
-    query: {
-      enabled: !!address && selectedPaymentMethod === "USDT",
-    },
-  });
 
   const tokensToGet = useMemo(() => {
     console.log("Calculating tokens with:", {
@@ -440,8 +442,8 @@ const PayWith = ({ variant }) => {
       // Get the input amount in proper decimals based on payment method
       const inputAmount =
         selectedPaymentMethod === "BNB"
-          ? parseEther(input)
-          : parseUnits(input, 6); // USDT has 6 decimals
+          ? parseEther(input) // 18 decimals
+          : parseUnits(input, 6); // 6 decimals for USDT
 
       // Log inputs for debugging
       console.log("Reward calc - Amount:", input);
@@ -475,9 +477,15 @@ const PayWith = ({ variant }) => {
       // Constants for calculation
       const APY_SCALING_FACTOR = BigInt(10000); // APY is stored in basis points (e.g., 8000 for 80%)
 
-      // Calculate total rewards: (inputAmount * APY * lockPeriod) / (oneYear * APY_SCALING_FACTOR)
+      // Adjust input amount if using BNB (convert from 18 decimals to 6 decimals for USDT)
+      const adjustedInputAmount =
+        selectedPaymentMethod === "BNB"
+          ? inputAmount / 10n ** 12n // Convert from 18 to 6 decimals
+          : inputAmount;
+
+      // Calculate total rewards: (adjustedInputAmount * APY * lockPeriod) / (oneYear * APY_SCALING_FACTOR)
       const totalRewardBigInt =
-        (inputAmount * selectedApy * selectedDuration) /
+        (adjustedInputAmount * selectedApy * selectedDuration) /
         (oneYear * APY_SCALING_FACTOR);
 
       console.log(
@@ -485,7 +493,7 @@ const PayWith = ({ variant }) => {
         totalRewardBigInt?.toString()
       );
 
-      // Convert to a more reasonable number by formatting with 6 decimals for USDT
+      // Format with 6 decimals for USDT
       const formattedReward = formatUnits(totalRewardBigInt, 6);
       console.log("Reward calc - Formatted reward:", formattedReward);
 
@@ -522,8 +530,8 @@ const PayWith = ({ variant }) => {
       // Get the input amount in proper decimals based on payment method
       const inputAmount =
         selectedPaymentMethod === "BNB"
-          ? parseEther(input)
-          : parseUnits(input, 6); // USDT has 6 decimals
+          ? parseEther(input) // 18 decimals
+          : parseUnits(input, 6); // 6 decimals for USDT
 
       // Determine APY based on lock period selection
       let selectedApy;
@@ -547,9 +555,15 @@ const PayWith = ({ variant }) => {
       const WEEK_DURATION = BigInt(604800); // 1 week in seconds
       const APY_SCALING_FACTOR = BigInt(10000); // APY is stored in basis points
 
-      // Calculate weekly reward: (inputAmount * apy * WEEK_DURATION) / (oneYear * scalingFactor)
+      // Adjust input amount if using BNB (convert from 18 decimals to 6 decimals for USDT)
+      const adjustedInputAmount =
+        selectedPaymentMethod === "BNB"
+          ? inputAmount / 10n ** 12n // Convert from 18 to 6 decimals
+          : inputAmount;
+
+      // Calculate weekly reward: (adjustedInputAmount * apy * WEEK_DURATION) / (oneYear * scalingFactor)
       const weeklyRewardBigInt =
-        (inputAmount * selectedApy * WEEK_DURATION) /
+        (adjustedInputAmount * selectedApy * WEEK_DURATION) /
         (oneYear * APY_SCALING_FACTOR);
 
       console.log(
@@ -557,7 +571,7 @@ const PayWith = ({ variant }) => {
         weeklyRewardBigInt?.toString()
       );
 
-      // Format the reward with 6 decimals for USDT
+      // Format with 6 decimals for USDT
       const formattedReward = formatUnits(weeklyRewardBigInt, 6);
       console.log("Weekly reward calc - Formatted reward:", formattedReward);
 
@@ -599,14 +613,34 @@ const PayWith = ({ variant }) => {
 
     try {
       const tokensToGetBigInt = parseUnits(tokensToGet, digiDecimals);
-      const minFormatted = formatUnits(minStakeAmount, digiDecimals);
       const maxFormatted = formatUnits(maxStakeAmount, digiDecimals);
 
-      if (tokensToGetBigInt < minStakeAmount) {
-        const readableMin = Number(minFormatted).toLocaleString(undefined, {
-          maximumFractionDigits: 2,
-        });
-        setValidationMessage(`Minimum stake amount is ${readableMin} DIGI`);
+      // Get the minimum amount for the selected lock period
+      let requiredMinAmount;
+      if (selectedLockPeriod === 0) {
+        requiredMinAmount = 3000n * 10n ** BigInt(digiDecimals); // 3k tokens
+      } else if (selectedLockPeriod === 1) {
+        requiredMinAmount = 30000n * 10n ** BigInt(digiDecimals); // 30k tokens
+      } else {
+        requiredMinAmount = 300000n * 10n ** BigInt(digiDecimals); // 300k tokens
+      }
+
+      if (tokensToGetBigInt < requiredMinAmount) {
+        const readableMin = Number(requiredMinAmount).toLocaleString(
+          undefined,
+          {
+            maximumFractionDigits: 2,
+          }
+        );
+        setValidationMessage(
+          `Minimum stake amount for ${
+            selectedLockPeriod === 0
+              ? "6 months"
+              : selectedLockPeriod === 1
+              ? "12 months"
+              : "24 months"
+          } is ${readableMin} DIGI`
+        );
       } else if (tokensToGetBigInt > maxStakeAmount) {
         const readableMax = Number(maxFormatted).toLocaleString(undefined, {
           maximumFractionDigits: 0,
@@ -625,6 +659,7 @@ const PayWith = ({ variant }) => {
     isPriceLoading,
     isUsdtPriceLoading,
     digiDecimals,
+    selectedLockPeriod,
   ]);
 
   const handleInputChange = (e) => {
@@ -646,43 +681,54 @@ const PayWith = ({ variant }) => {
   }, []);
 
   const handleApproveUSDT = async () => {
-    if (!address || selectedPaymentMethod !== "USDT") return;
+    if (!address) return;
 
     try {
-      setIsApprovalPending(true);
-      const inputAmount = parseUnits(input, 6); // USDT has 6 decimals
-      await writeContract({
+      const tx = await writeContract({
         address: USDT_ADDRESS,
         abi: IERC20_ABI,
         functionName: "approve",
-        args: [PRESALE_ADDRESS, inputAmount],
+        args: [PRESALE_ADDRESS, LARGE_APPROVAL_AMOUNT],
         chainId: 97,
       });
+
+      // Wait for transaction confirmation
+      await tx.wait();
+      // Refetch allowance after approval
+      await refetchAllowance();
     } catch (error) {
-      console.error("Error approving USDT:", error);
-      setValidationMessage("Failed to approve USDT");
-    } finally {
-      setIsApprovalPending(false);
+      console.error("Error in approval process:", error);
+      // setValidationMessage("Failed to approve USDT");
     }
   };
+
+  // Get user stakes data with refetch enabled
+  const { refetch: refetchUserStakes } = useReadContract({
+    address: PRESALE_ADDRESS,
+    abi: PRESALE_ABI,
+    functionName: "getUserStakes",
+    args: [address],
+    chainId: 97,
+    query: {
+      enabled: !!address,
+    },
+  });
 
   const handleBuyTokens = async () => {
     if (!address) return;
 
     try {
-      // Calculate token amount from input payment
       const tokenAmount = tokensToGet;
       if (!tokenAmount || tokenAmount === "0") {
         setValidationMessage("Invalid token amount");
         return;
       }
 
-      // Convert token amount to contract format
       const inputAmount = parseUnits(tokenAmount, digiDecimals);
 
       if (selectedPaymentMethod === "BNB") {
         const bnbAmount = parseEther(input);
-        await writeContract({
+        const tx = await writeContract({
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "buyTokensWithBNB",
@@ -690,25 +736,26 @@ const PayWith = ({ variant }) => {
           value: bnbAmount,
           chainId: 97,
         });
+        // Wait for transaction confirmation
+        await tx.wait();
+        // Refetch user stakes data
+        await refetchUserStakes();
       } else {
-        const usdtAmount = parseUnits(input, 6);
-
-        if (!usdtAllowance || usdtAllowance < usdtAmount) {
-          setValidationMessage("Please approve USDT first");
-          return;
-        }
-
-        await writeContract({
+        const tx = await writeContract({
           address: PRESALE_ADDRESS,
           abi: PRESALE_ABI,
           functionName: "buyTokensWithUSDT",
           args: [inputAmount, selectedLockPeriod, urlReferralAddress],
           chainId: 97,
         });
+        // Wait for transaction confirmation
+        await tx.wait();
+        // Refetch user stakes data
+        await refetchUserStakes();
       }
     } catch (error) {
       console.error("Error buying tokens:", error);
-      setValidationMessage("Failed to buy tokens");
+      // setValidationMessage("Failed to buy tokens");
     }
   };
 
@@ -728,23 +775,13 @@ const PayWith = ({ variant }) => {
     }
   };
 
-  // Determine the correct action for the main button click
-  const handleMainButtonClick = () => {
-    if (!isConnected) {
-      openConnectModal?.(); // Use optional chaining just in case
-    } else {
-      handleBuyTokens();
-    }
-  };
-
   // --- Button Disabled Logic ---
   const isButtonDisabled =
     isPriceLoading || // Conditions relevant ONLY when buying
     isLimitsLoading ||
     !input ||
     Number(input) <= 0 ||
-    !!validationMessage ||
-    isWritePending;
+    !!validationMessage;
 
   return (
     <PayWithStyleWrapper variant={variant}>
@@ -917,6 +954,21 @@ const PayWith = ({ variant }) => {
             onSelect={(value) => setSelectedLockPeriod(value)}
             placeholder="Select Lock Period"
           />
+          <p
+            className="helper-text"
+            style={{
+              fontSize: "13px",
+              color: "rgba(255, 255, 255, 0.7)",
+              marginTop: "8px",
+              marginBottom: "0",
+            }}
+          >
+            {selectedLockPeriod === 0
+              ? "Minimum stake: 3,000 DIGI"
+              : selectedLockPeriod === 1
+              ? "Minimum stake: 30,000 DIGI"
+              : "Minimum stake: 300,000 DIGI"}
+          </p>
         </div>
       </div>
 
@@ -930,27 +982,39 @@ const PayWith = ({ variant }) => {
           marginTop: "20px",
         }}
       >
-        {selectedPaymentMethod === "USDT" && (
+        {!isConnected ? (
+          <button className="presale-item-btn" onClick={openConnectModal}>
+            Connect Wallet
+          </button>
+        ) : selectedPaymentMethod === "USDT" ? (
+          // Check if we need approval for USDT
+          !usdtAllowance ||
+          (input && usdtAllowance < parseEther("10000000")) ? (
+            <button
+              className="presale-item-btn"
+              onClick={handleApproveUSDT}
+              disabled={isButtonDisabled}
+            >
+              Approve USDT
+            </button>
+          ) : (
+            <button
+              className="presale-item-btn"
+              onClick={handleBuyTokens}
+              disabled={isButtonDisabled}
+            >
+              Buy with USDT
+            </button>
+          )
+        ) : (
           <button
             className="presale-item-btn"
-            onClick={handleApproveUSDT}
-            disabled={!isConnected || isApprovalPending || isWritePending}
+            onClick={handleBuyTokens}
+            disabled={isButtonDisabled}
           >
-            {isApprovalPending ? "Approving..." : "Approve USDT"}
+            Buy with BNB
           </button>
         )}
-
-        <button
-          className="presale-item-btn"
-          onClick={handleMainButtonClick}
-          disabled={isConnected ? isButtonDisabled : false}
-        >
-          {!isConnected
-            ? "Connect Wallet"
-            : isWritePending
-            ? "Processing..."
-            : `Buy with ${selectedPaymentMethod}`}
-        </button>
       </div>
 
       {validationMessage && (
