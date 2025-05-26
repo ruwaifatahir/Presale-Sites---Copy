@@ -25,9 +25,9 @@ import Dropdown from "./Dropdown/Dropdown";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const STAKE_PLAN_OPTIONS = [
-  { label: "Plan 1 - 80% APY (Min: 100 DIGI)", value: 0 },
-  { label: "Plan 2 - 80% APY (Min: 100 DIGI)", value: 1 },
-  { label: "Plan 3 - 80% APY (Min: 100 DIGI)", value: 2 },
+  { label: "Plan 1 - 80% APY, 6 Months (Min: 300 DIGI)", value: 0 },
+  { label: "Plan 2 - 100% APY, 12 Months (Min: 30,000 DIGI)", value: 1 },
+  { label: "Plan 3 - 120% APY, 24 Months (Min: 300,000 DIGI)", value: 2 },
 ];
 
 const PAYMENT_OPTIONS = [
@@ -83,7 +83,7 @@ const PayWith = ({ variant }) => {
     abi: IERC20_ABI,
     functionName: "allowance",
     args: [address || ZERO_ADDRESS, PRESALE_ADDRESS],
-    chainId: 97,
+    chainId: 56,
     query: {
       enabled: !!address && selectedPaymentMethod === "USDT",
     },
@@ -94,7 +94,7 @@ const PayWith = ({ variant }) => {
     address: USDT_ADDRESS,
     abi: IERC20_ABI,
     functionName: "decimals",
-    chainId: 97,
+    chainId: 56,
     query: {
       enabled: selectedPaymentMethod === "USDT",
     },
@@ -115,7 +115,7 @@ const PayWith = ({ variant }) => {
       abi: PRESALE_ABI,
       functionName: "getStakeInfo",
       args: [address || ZERO_ADDRESS, selectedStakePlan],
-      chainId: 97,
+      chainId: 56,
       query: {
         enabled: !!address,
       },
@@ -147,32 +147,32 @@ const PayWith = ({ variant }) => {
       address: PRESALE_ADDRESS,
       abi: PRESALE_ABI,
       functionName: "getTokenPrice",
-      chainId: 97,
+      chainId: 56,
     },
     {
       address: PRESALE_ADDRESS,
       abi: PRESALE_ABI,
       functionName: "getBnbPrice",
-      chainId: 97,
+      chainId: 56,
     },
     {
       address: PRESALE_ADDRESS,
       abi: PRESALE_ABI,
       functionName: "stakePlans",
       args: [selectedStakePlan],
-      chainId: 97,
+      chainId: 56,
     },
     {
       address: PRESALE_ADDRESS,
       abi: PRESALE_ABI,
       functionName: "HARDCAP",
-      chainId: 97,
+      chainId: 56,
     },
     {
       address: PRESALE_ADDRESS,
       abi: PRESALE_ABI,
       functionName: "totalInvestedTokens",
-      chainId: 97,
+      chainId: 56,
     },
   ];
 
@@ -204,6 +204,11 @@ const PayWith = ({ variant }) => {
     if (!input || !tokenPrice || tokenPrice === 0n) return "0";
 
     try {
+      // Validate input is a valid number string
+      if (isNaN(parseFloat(input)) || parseFloat(input) <= 0) {
+        return "0";
+      }
+
       if (selectedPaymentMethod === "BNB") {
         if (!bnbPrice || bnbPrice === 0n) return "0";
 
@@ -212,8 +217,10 @@ const PayWith = ({ variant }) => {
         const tokens = (usdValue * parseEther("1")) / tokenPrice;
         return formatUnits(tokens, 18);
       } else {
-        // USDT payment
-        const usdtAmount = parseUnits(input, usdtDecimals || 18);
+        // USDT payment - validate input before parsing
+        if (!usdtDecimals) return "0";
+
+        const usdtAmount = parseUnits(input, usdtDecimals);
         // Convert USDT to 18 decimals for the contract if needed
         const usdtAmountIn18Decimals =
           usdtDecimals === 6
@@ -233,6 +240,22 @@ const PayWith = ({ variant }) => {
   const rewardsCalculation = useMemo(() => {
     // Early return if no input
     if (!input || Number(input) <= 0) {
+      return {
+        totalRewards: "0",
+        weeklyRewards: "0",
+      };
+    }
+
+    // Early return if stake plan data is not loaded yet - handle array format
+    if (
+      !stakePlan ||
+      !Array.isArray(stakePlan) ||
+      stakePlan.length < 3 ||
+      !stakePlan[0] ||
+      !stakePlan[1] ||
+      stakePlan[0] === 0n ||
+      stakePlan[1] === 0n
+    ) {
       return {
         totalRewards: "0",
         weeklyRewards: "0",
@@ -260,31 +283,80 @@ const PayWith = ({ variant }) => {
         return { totalRewards: "0", weeklyRewards: "0" };
       }
 
-      // Get APY and lock duration from stake plan
-      let apy = 80; // Default 80% APY as fallback
-      let lockDurationSeconds = 7 * 24 * 60 * 60; // Default 1 week in seconds
+      // Get APY and lock duration from stake plan array format [apy, lockDuration, minStakeAmount]
+      const apy = parseFloat(formatUnits(stakePlan[0], 18)); // stakePlan[0] is apy
+      const lockDurationSeconds = Number(stakePlan[1]); // stakePlan[1] is lockDuration
 
-      if (stakePlan?.apy && stakePlan.apy > 0n) {
-        apy = parseFloat(formatUnits(stakePlan.apy, 18));
+      // Special debugging for Plan 2
+      if (selectedStakePlan === 1) {
+        console.log("=== PLAN 2 DEBUG ===");
+        console.log("stakePlan raw:", stakePlan);
+        console.log("apy raw:", stakePlan[0].toString());
+        console.log("lockDuration raw:", stakePlan[1].toString());
+        console.log("apy parsed:", apy);
+        console.log("lockDurationSeconds:", lockDurationSeconds);
+        console.log("investAmountUSD:", investAmountUSD);
       }
 
-      if (stakePlan?.lockDuration && stakePlan.lockDuration > 0n) {
-        lockDurationSeconds = Number(stakePlan.lockDuration);
-      }
-
-      if (apy <= 0 || isNaN(apy)) {
+      if (apy <= 0 || isNaN(apy) || lockDurationSeconds <= 0) {
         return { totalRewards: "0", weeklyRewards: "0" };
       }
 
       // Calculate rewards based on actual lock period
-      const lockDurationWeeks = lockDurationSeconds / (7 * 24 * 60 * 60); // Convert seconds to weeks
-      const annualRewards = (investAmountUSD * apy) / 100;
-      const weeklyRewards = annualRewards / 52; // Weekly rewards based on APY
-      const totalRewards = weeklyRewards * lockDurationWeeks; // Total rewards for the lock period
+      const lockDurationDays = lockDurationSeconds / (24 * 60 * 60); // Convert seconds to days
+      const annualRewards = (investAmountUSD * apy) / 100; // Full annual rewards based on APY
+      const dailyRewards = annualRewards / 365; // Daily rewards
+      const totalRewards = dailyRewards * lockDurationDays; // Total rewards for the lock period
+      const weeklyRewards = dailyRewards * 7; // Weekly rewards
+
+      // More debugging for Plan 2
+      if (selectedStakePlan === 1) {
+        console.log("lockDurationDays:", lockDurationDays);
+        console.log("annualRewards:", annualRewards);
+        console.log("dailyRewards:", dailyRewards);
+        console.log("totalRewards:", totalRewards);
+        console.log("weeklyRewards:", weeklyRewards);
+      }
+
+      // Ensure clean number formatting - use more robust approach
+      let totalRewardsFormatted, weeklyRewardsFormatted;
+
+      try {
+        // Use parseFloat and toFixed for cleaner formatting
+        const totalRewardsNum = Number.parseFloat(totalRewards);
+        const weeklyRewardsNum = Number.parseFloat(weeklyRewards);
+
+        if (isNaN(totalRewardsNum) || isNaN(weeklyRewardsNum)) {
+          totalRewardsFormatted = "0.00";
+          weeklyRewardsFormatted = "0.00";
+        } else {
+          totalRewardsFormatted = totalRewardsNum.toFixed(2);
+          weeklyRewardsFormatted = weeklyRewardsNum.toFixed(2);
+        }
+      } catch (formatError) {
+        console.error("Error formatting numbers:", formatError);
+        totalRewardsFormatted = "0.00";
+        weeklyRewardsFormatted = "0.00";
+      }
+
+      // Final debugging for Plan 2
+      if (selectedStakePlan === 1) {
+        console.log("totalRewardsFormatted:", totalRewardsFormatted);
+        console.log("weeklyRewardsFormatted:", weeklyRewardsFormatted);
+        console.log(
+          "typeof totalRewardsFormatted:",
+          typeof totalRewardsFormatted
+        );
+        console.log(
+          "typeof weeklyRewardsFormatted:",
+          typeof weeklyRewardsFormatted
+        );
+        console.log("=== END PLAN 2 DEBUG ===");
+      }
 
       return {
-        totalRewards: totalRewards.toFixed(4),
-        weeklyRewards: weeklyRewards.toFixed(4),
+        totalRewards: totalRewardsFormatted,
+        weeklyRewards: weeklyRewardsFormatted,
       };
     } catch (error) {
       console.error("Error calculating rewards:", error);
@@ -293,13 +365,85 @@ const PayWith = ({ variant }) => {
         weeklyRewards: "0",
       };
     }
-  }, [
-    input,
-    stakePlan,
-    bnbPrice,
-    selectedPaymentMethod,
-    isContractDataLoading,
-  ]);
+  }, [input, stakePlan, bnbPrice, selectedPaymentMethod, selectedStakePlan]);
+
+  // Debug the final rewards calculation result
+  if (selectedStakePlan === 1) {
+    console.log("Final rewardsCalculation for Plan 2:", rewardsCalculation);
+  }
+
+  // Create safe values for input fields to prevent any concatenation issues
+  const safeTotalRewards = useMemo(() => {
+    const value = rewardsCalculation?.totalRewards;
+    if (!value || value === "0") return "0";
+    // Ensure it's a clean string and not concatenated
+    const cleanValue = String(value).trim();
+    // Additional safeguard: if the value contains the same number twice, take only the first part
+    if (cleanValue.includes(".") && cleanValue.split(".").length > 2) {
+      // If there are multiple decimal points, something went wrong
+      return "0";
+    }
+    // Check for obvious duplication patterns
+    const parts = cleanValue.split(".");
+    if (parts.length === 2 && parts[0] && parts[1] && cleanValue.length > 10) {
+      // If it's suspiciously long, it might be duplicated
+      const firstPart = parts[0];
+      const secondPart = parts[1];
+      if (
+        cleanValue.includes(
+          firstPart + "." + secondPart.substring(0, 2) + firstPart
+        )
+      ) {
+        // Detected duplication pattern, return just the first valid number
+        return firstPart + "." + secondPart.substring(0, 2);
+      }
+    }
+    return cleanValue;
+  }, [rewardsCalculation?.totalRewards]);
+
+  const safeWeeklyRewards = useMemo(() => {
+    const value = rewardsCalculation?.weeklyRewards;
+    if (!value || value === "0") return "0";
+    // Ensure it's a clean string and not concatenated
+    const cleanValue = String(value).trim();
+    // Additional safeguard: if the value contains the same number twice, take only the first part
+    if (cleanValue.includes(".") && cleanValue.split(".").length > 2) {
+      // If there are multiple decimal points, something went wrong
+      return "0";
+    }
+    // Check for obvious duplication patterns
+    const parts = cleanValue.split(".");
+    if (parts.length === 2 && parts[0] && parts[1] && cleanValue.length > 10) {
+      // If it's suspiciously long, it might be duplicated
+      const firstPart = parts[0];
+      const secondPart = parts[1];
+      if (
+        cleanValue.includes(
+          firstPart + "." + secondPart.substring(0, 2) + firstPart
+        )
+      ) {
+        // Detected duplication pattern, return just the first valid number
+        return firstPart + "." + secondPart.substring(0, 2);
+      }
+    }
+    return cleanValue;
+  }, [rewardsCalculation?.weeklyRewards]);
+
+  // Additional debugging for Plan 2
+  if (selectedStakePlan === 1) {
+    console.log(
+      "SAFE VALUES - Total:",
+      safeTotalRewards,
+      "Weekly:",
+      safeWeeklyRewards
+    );
+    console.log(
+      "ORIGINAL VALUES - Total:",
+      rewardsCalculation?.totalRewards,
+      "Weekly:",
+      rewardsCalculation?.weeklyRewards
+    );
+  }
 
   // Get referral address from URL
   useEffect(() => {
@@ -318,9 +462,8 @@ const PayWith = ({ variant }) => {
     }
 
     const tokens = parseFloat(tokensToGet);
-    const minStakeAmount = parseFloat(
-      formatUnits(stakePlan?.minStakeAmount || 0n, 18)
-    );
+    // Handle array format: stakePlan[2] is minStakeAmount
+    const minStakeAmount = parseFloat(formatUnits(stakePlan?.[2] || 0n, 18));
 
     if (tokens < minStakeAmount) {
       setValidationMessage(`Minimum stake amount is ${minStakeAmount} DIGI`);
@@ -337,8 +480,27 @@ const PayWith = ({ variant }) => {
         ? parseFloat(input) * parseFloat(formatUnits(bnbPrice || 0n, 8))
         : parseFloat(input);
 
-    if (totalInvested + parseUnits(investAmount.toString(), 18) > hardcap) {
-      setValidationMessage("Investment would exceed hardcap");
+    // Check if investAmount is valid before using it
+    if (isNaN(investAmount) || investAmount <= 0) {
+      setValidationMessage("Invalid investment amount");
+      return;
+    }
+
+    // Check if contract data is loaded before validating hardcap
+    if (!totalInvested || !hardcap || totalInvested === 0n || hardcap === 0n) {
+      // Skip hardcap validation if contract data is not loaded yet
+      setValidationMessage("");
+      return;
+    }
+
+    try {
+      if (totalInvested + parseUnits(investAmount.toString(), 18) > hardcap) {
+        setValidationMessage("Investment would exceed hardcap");
+        return;
+      }
+    } catch (error) {
+      console.error("Error validating hardcap:", error);
+      setValidationMessage("Error validating investment amount");
       return;
     }
 
@@ -373,7 +535,7 @@ const PayWith = ({ variant }) => {
         abi: IERC20_ABI,
         functionName: "approve",
         args: [PRESALE_ADDRESS, approvalAmount],
-        chainId: 97,
+        chainId: 56,
       });
 
       // Set the transaction hash for monitoring
@@ -386,6 +548,12 @@ const PayWith = ({ variant }) => {
   const handleStake = async () => {
     if (!address) return;
 
+    // Validate input before proceeding
+    if (!input || isNaN(parseFloat(input)) || parseFloat(input) <= 0) {
+      console.error("Invalid input value for staking");
+      return;
+    }
+
     try {
       let txHash;
       if (selectedPaymentMethod === "BNB") {
@@ -396,10 +564,16 @@ const PayWith = ({ variant }) => {
           functionName: "stake",
           args: [selectedStakePlan, urlReferralAddress],
           value: bnbAmount,
-          chainId: 97,
+          chainId: 56,
         });
       } else {
-        const usdtAmount = parseUnits(input, usdtDecimals || 18);
+        // Validate USDT decimals before parsing
+        if (!usdtDecimals) {
+          console.error("USDT decimals not loaded");
+          return;
+        }
+
+        const usdtAmount = parseUnits(input, usdtDecimals);
         // Convert USDT to 18 decimals for the contract if needed
         const usdtAmountIn18Decimals =
           usdtDecimals === 6
@@ -410,7 +584,7 @@ const PayWith = ({ variant }) => {
           abi: PRESALE_ABI,
           functionName: "stake",
           args: [usdtAmountIn18Decimals, selectedStakePlan, urlReferralAddress],
-          chainId: 97,
+          chainId: 56,
         });
       }
 
@@ -439,8 +613,8 @@ const PayWith = ({ variant }) => {
   // Check if USDT needs approval
   const needsApproval =
     selectedPaymentMethod === "USDT" &&
-    (!usdtAllowance ||
-      usdtAllowance < parseUnits("100000", usdtDecimals || 18)); // Use actual decimals, fallback to 18
+    usdtDecimals &&
+    (!usdtAllowance || usdtAllowance < parseUnits("100000", usdtDecimals)); // Only check if decimals are loaded
 
   // Button disabled logic - different for approval vs staking
   const isButtonDisabled = (() => {
@@ -529,10 +703,19 @@ const PayWith = ({ variant }) => {
         <div className="presale-item mb-30">
           <div className="presale-item-inner">
             <label>Est. Total Rewards (Lock Period - USDT)</label>
+            {/* Debug the exact value being passed to input */}
+            {selectedStakePlan === 1 &&
+              console.log(
+                "INPUT VALUE FOR TOTAL REWARDS:",
+                rewardsCalculation.totalRewards,
+                "TYPE:",
+                typeof rewardsCalculation.totalRewards
+              )}
             <input
+              key={`total-rewards-${selectedStakePlan}-${input}`}
               type="text"
               placeholder="0"
-              value={rewardsCalculation.totalRewards}
+              value={safeTotalRewards}
               disabled
             />
           </div>
@@ -541,10 +724,19 @@ const PayWith = ({ variant }) => {
         <div className="presale-item mb-30">
           <div className="presale-item-inner">
             <label>Est. Weekly Rewards (USDT)</label>
+            {/* Debug the exact value being passed to input */}
+            {selectedStakePlan === 1 &&
+              console.log(
+                "INPUT VALUE FOR WEEKLY REWARDS:",
+                rewardsCalculation.weeklyRewards,
+                "TYPE:",
+                typeof rewardsCalculation.weeklyRewards
+              )}
             <input
+              key={`weekly-rewards-${selectedStakePlan}-${input}`}
               type="text"
               placeholder="0"
-              value={rewardsCalculation.weeklyRewards}
+              value={safeWeeklyRewards}
               disabled
             />
           </div>
@@ -564,15 +756,21 @@ const PayWith = ({ variant }) => {
           >
             <p
               style={{
-                fontSize: "13px",
-                color: "rgba(255, 255, 255, 0.8)",
+                fontSize: "12px",
+                color: "rgba(255, 255, 255, 0.6)",
                 margin: "0",
                 lineHeight: "1.4",
               }}
             >
-              💡 <strong>Rewards Info:</strong> Based on 80% APY. Total rewards
-              shown are for the 1-week lock period. Weekly rewards continue as
-              long as you remain staked.
+              💡 <strong>Rewards Info:</strong> Based on{" "}
+              {stakePlan?.[0] ? Number(formatUnits(stakePlan[0], 18)) : 80}%
+              APY. Total rewards shown are the maximum you can earn if you stay
+              staked for the full{" "}
+              {stakePlan?.[1]
+                ? Math.round(Number(stakePlan[1]) / (30 * 24 * 60 * 60))
+                : 6}
+              -month lock period. Rewards are distributed continuously over
+              time.
             </p>
           </div>
         )}

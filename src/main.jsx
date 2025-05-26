@@ -19,7 +19,7 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
+  // <React.StrictMode>
     <Rainbowkit>
       <ThemeProvider theme={ThemeStyles}>
         <GlobalStyles />
@@ -30,5 +30,5 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         </PresaleContextProvider>
       </ThemeProvider>
     </Rainbowkit>
-  </React.StrictMode>
+  // </React.StrictMode>
 );

@@ -5,6 +5,7 @@ import {
   useReadContract,
   useReadContracts,
   useWriteContract,
+  useWaitForTransactionReceipt,
 } from "wagmi";
 import { formatEther, formatUnits } from "viem";
 import { PRESALE_ADDRESS } from "../../config/constants";
@@ -16,6 +17,7 @@ const UserDataDisplayClaim = () => {
   const [pendingWithdrawIndex, setPendingWithdrawIndex] = useState(-1);
   const [currentTime, setCurrentTime] = useState(Math.floor(Date.now() / 1000));
   const [isStakesVisible, setIsStakesVisible] = useState(false);
+  const [withdrawalTxHash, setWithdrawalTxHash] = useState(null);
 
   // Update current time periodically
   useEffect(() => {
@@ -26,7 +28,7 @@ const UserDataDisplayClaim = () => {
   }, []);
 
   // 1. Fetch BNB Balance
-  const { data: balanceData, isLoading: isBalanceLoading } = useBalance({
+  const { data: balanceData } = useBalance({
     address: address,
     chainId: chainId,
     query: {
@@ -35,12 +37,12 @@ const UserDataDisplayClaim = () => {
   });
 
   // 2. Fetch User Staker Info
-  const { data: stakerInfo, isLoading: isStakerLoading } = useReadContract({
+  const { data: stakerInfo, refetch: refetchStakerInfo } = useReadContract({
     address: PRESALE_ADDRESS,
     abi: PRESALE_ABI,
     functionName: "getStakerInfo",
     args: [address || "0x0000000000000000000000000000000000000000"],
-    chainId: 97,
+    chainId: 56,
     query: {
       enabled: !!address,
       select: (data) =>
@@ -60,25 +62,25 @@ const UserDataDisplayClaim = () => {
       abi: PRESALE_ABI,
       functionName: "stakePlans",
       args: [0],
-      chainId: 97,
+      chainId: 56,
     },
     {
       address: PRESALE_ADDRESS,
       abi: PRESALE_ABI,
       functionName: "stakePlans",
       args: [1],
-      chainId: 97,
+      chainId: 56,
     },
     {
       address: PRESALE_ADDRESS,
       abi: PRESALE_ABI,
       functionName: "stakePlans",
       args: [2],
-      chainId: 97,
+      chainId: 56,
     },
   ];
 
-  const { data: stakePlansData, isLoading: isPlansLoading } = useReadContracts({
+  const { data: stakePlansData } = useReadContracts({
     contracts: stakePlanCalls,
     query: {
       enabled: true,
@@ -88,32 +90,96 @@ const UserDataDisplayClaim = () => {
   // Add write hook for withdrawing
   const { writeContract, isPending: isWithdrawPending } = useWriteContract();
 
+  // Auto-refetch staker info every 10 seconds when connected
+  useEffect(() => {
+    if (!isConnected || !address) return;
+
+    const interval = setInterval(() => {
+      refetchStakerInfo();
+    }, 10000); // Refetch every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [isConnected, address, refetchStakerInfo]);
+
+  // Listen for withdrawal confirmation events to trigger immediate refresh
+  useEffect(() => {
+    const handleWithdrawalConfirmed = (event) => {
+      console.log(
+        "UserDataDisplayClaim - Received withdrawalConfirmed event:",
+        event.detail
+      );
+      // Trigger immediate refresh of staker data
+      refetchStakerInfo();
+    };
+
+    window.addEventListener("withdrawalConfirmed", handleWithdrawalConfirmed);
+
+    return () => {
+      window.removeEventListener(
+        "withdrawalConfirmed",
+        handleWithdrawalConfirmed
+      );
+    };
+  }, [refetchStakerInfo]);
+
+  // Wait for withdrawal transaction confirmation
+  const {
+    isLoading: isWithdrawalConfirming,
+    isSuccess: isWithdrawalConfirmed,
+  } = useWaitForTransactionReceipt({
+    hash: withdrawalTxHash,
+  });
+
+  // Handle withdrawal confirmation
+  useEffect(() => {
+    if (isWithdrawalConfirmed) {
+      setWithdrawalTxHash(null);
+      setPendingWithdrawIndex(-1);
+
+      // Refetch user data immediately
+      refetchStakerInfo();
+
+      // Emit custom event for other components to refresh
+      window.dispatchEvent(
+        new CustomEvent("withdrawalConfirmed", {
+          detail: { address },
+        })
+      );
+
+      console.log("Withdrawal confirmed - triggering data refresh");
+    }
+  }, [isWithdrawalConfirmed, refetchStakerInfo, address]);
+
   // 4. Process and Format Data
   const processedData = useMemo(() => {
     const bnbBalance = balanceData
       ? parseFloat(formatEther(balanceData.value)).toFixed(4)
       : "0";
 
-    // Format staker data
-    const totalStaked = stakerInfo?.totalStakedAmount
-      ? formatUnits(stakerInfo.totalStakedAmount, 18)
+    // Format staker data - handle array format from contract
+    // stakerInfo is returned as [referrer, totalStakedAmount, totalInvestedAmount, stakes]
+    const totalStakedAmount = stakerInfo?.[1] || 0n;
+    const totalInvestedAmount = stakerInfo?.[2] || 0n;
+    const stakes = stakerInfo?.[3] || [];
+
+    const totalStaked = totalStakedAmount
+      ? formatUnits(totalStakedAmount, 18)
       : "0";
 
-    const totalInvested = stakerInfo?.totalInvestedAmount
-      ? formatUnits(stakerInfo.totalInvestedAmount, 18)
+    const totalInvested = totalInvestedAmount
+      ? formatUnits(totalInvestedAmount, 18)
       : "0";
 
     // Count active stakes
     const activeStakes =
-      stakerInfo?.stakes?.filter((stake) => stake.stakedAmount > 0n).length ||
-      0;
+      stakes?.filter((stake) => stake.stakedAmount > 0n).length || 0;
 
     // Calculate total withdrawable amount across all stakes
     let totalWithdrawable = 0n;
     let totalWithdrawn = 0n;
 
-    if (stakerInfo?.stakes) {
-      stakerInfo.stakes.forEach((stake) => {
+    if (stakes) {
+      stakes.forEach((stake) => {
         if (stake.stakedAmount > 0n) {
           const remainingAmount =
             stake.stakedAmount - stake.totalWithdrawnAmount;
@@ -138,13 +204,11 @@ const UserDataDisplayClaim = () => {
       activeStakes,
       formattedWithdrawable,
       formattedWithdrawn,
+      stakes,
       hasReferrer:
-        stakerInfo?.referrer !== "0x0000000000000000000000000000000000000000",
+        stakerInfo?.[0] !== "0x0000000000000000000000000000000000000000",
     };
   }, [balanceData, stakerInfo]);
-
-  // Handle loading state
-  const isLoading = isBalanceLoading || isStakerLoading || isPlansLoading;
 
   // Don't render anything if not connected
   if (!isConnected || !address) {
@@ -157,19 +221,21 @@ const UserDataDisplayClaim = () => {
     setPendingWithdrawIndex(stakeIndex);
     try {
       console.log(`Attempting to withdraw from stake index: ${stakeIndex}`);
-      await writeContract({
+      const txHash = await writeContract({
         address: PRESALE_ADDRESS,
         abi: PRESALE_ABI,
         functionName: "withdraw",
         args: [stakeIndex],
-        chainId: 97,
+        chainId: 56,
       });
+
+      // Set the transaction hash for monitoring
+      setWithdrawalTxHash(txHash);
       console.log(
         `Withdrawal transaction submitted for stake index: ${stakeIndex}`
       );
     } catch (error) {
       console.error(`Error withdrawing from stake ${stakeIndex}:`, error);
-    } finally {
       setPendingWithdrawIndex(-1);
     }
   };
@@ -210,275 +276,259 @@ const UserDataDisplayClaim = () => {
 
   return (
     <UserDataDisplayStyleWrapper>
-      {isLoading ? (
-        <p className="loading-text">Loading your data...</p>
-      ) : (
-        <>
-          <div className="data-row">
-            <span className="data-label">BNB Balance:</span>
-            <span className="data-value">
-              {processedData.bnbBalance} {balanceData?.symbol || ""}
-            </span>
-          </div>
-          <div className="data-row">
-            <span className="data-label">Total Staked:</span>
-            <span className="data-value">{processedData.totalStaked} DIGI</span>
-          </div>
-          <div className="data-row">
-            <span className="data-label">Total Invested:</span>
-            <span className="data-value">
-              {processedData.totalInvested} USD
-            </span>
-          </div>
-          <div className="data-row">
-            <span className="data-label">Active Stakes:</span>
-            <span className="data-value">
-              {processedData.activeStakes} plans
-            </span>
-          </div>
-          <div className="data-row">
-            <span className="data-label">Withdrawable:</span>
-            <span className="data-value">
-              {processedData.formattedWithdrawable} DIGI
-            </span>
-          </div>
-          <div className="data-row">
-            <span className="data-label">Total Withdrawn:</span>
-            <span className="data-value">
-              {processedData.formattedWithdrawn} DIGI
-            </span>
-          </div>
+      <div className="data-row">
+        <span className="data-label">BNB Balance:</span>
+        <span className="data-value">
+          {processedData.bnbBalance} {balanceData?.symbol || ""}
+        </span>
+      </div>
+      <div className="data-row">
+        <span className="data-label">Total Staked:</span>
+        <span className="data-value">{processedData.totalStaked} DIGI</span>
+      </div>
+      <div className="data-row">
+        <span className="data-label">Total Invested:</span>
+        <span className="data-value">{processedData.totalInvested} USD</span>
+      </div>
+      <div className="data-row">
+        <span className="data-label">Active Stakes:</span>
+        <span className="data-value">{processedData.activeStakes} plans</span>
+      </div>
+      <div className="data-row">
+        <span className="data-label">Withdrawable:</span>
+        <span className="data-value">
+          {processedData.formattedWithdrawable} DIGI
+        </span>
+      </div>
+      <div className="data-row">
+        <span className="data-label">Total Withdrawn:</span>
+        <span className="data-value">
+          {processedData.formattedWithdrawn} DIGI
+        </span>
+      </div>
 
-          {/* Toggle button for stakes list */}
-          <div className="stakes-toggle" style={{ marginTop: "20px" }}>
-            <button
-              onClick={toggleStakesVisibility}
-              className="toggle-button"
-              style={{
-                background: "rgba(255, 255, 255, 0.1)",
-                border: "1px solid rgba(255, 255, 255, 0.2)",
-                color: "white",
-                padding: "8px 16px",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontSize: "14px",
-                width: "100%",
-              }}
-            >
-              {isStakesVisible ? "Hide Stakes Details" : "Show Stakes Details"}{" "}
-              ({processedData.activeStakes})
-            </button>
-          </div>
+      {/* Toggle button for stakes list */}
+      <div className="stakes-toggle" style={{ marginTop: "20px" }}>
+        <button
+          onClick={toggleStakesVisibility}
+          className="toggle-button"
+          style={{
+            background: "rgba(255, 255, 255, 0.1)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            color: "white",
+            padding: "8px 16px",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "14px",
+            width: "100%",
+          }}
+        >
+          {isStakesVisible ? "Hide Stakes Details" : "Show Stakes Details"} (
+          {processedData.activeStakes})
+        </button>
+      </div>
 
-          {/* Stakes list */}
-          {isStakesVisible && stakerInfo?.stakes && (
-            <div className="stakes-list" style={{ marginTop: "15px" }}>
-              {stakerInfo.stakes.map((stake, index) => {
-                if (stake.stakedAmount === 0n) return null;
+      {/* Stakes list */}
+      {isStakesVisible && processedData.stakes && (
+        <div className="stakes-list" style={{ marginTop: "15px" }}>
+          {processedData.stakes.map((stake, index) => {
+            if (stake.stakedAmount === 0n) return null;
 
-                const stakePlan = stakePlansData?.[index]?.result;
-                const canWithdraw = canWithdrawFromStake(stake, stakePlan);
-                const withdrawnPercentage =
-                  calculateWithdrawablePercentage(stake);
-                const remainingAmount =
-                  stake.stakedAmount - stake.totalWithdrawnAmount;
-                const weeklyWithdrawable =
-                  (stake.stakedAmount * 10000n) / 100000n; // 10%
-                const actualWithdrawable =
-                  weeklyWithdrawable > remainingAmount
-                    ? remainingAmount
-                    : weeklyWithdrawable;
+            const stakePlan = stakePlansData?.[index]?.result;
+            const canWithdraw = canWithdrawFromStake(stake, stakePlan);
+            const withdrawnPercentage = calculateWithdrawablePercentage(stake);
+            const remainingAmount =
+              stake.stakedAmount - stake.totalWithdrawnAmount;
+            const weeklyWithdrawable = (stake.stakedAmount * 10000n) / 100000n; // 10%
+            const actualWithdrawable =
+              weeklyWithdrawable > remainingAmount
+                ? remainingAmount
+                : weeklyWithdrawable;
 
-                return (
-                  <div
-                    key={index}
-                    className="stake-item"
+            return (
+              <div
+                key={index}
+                className="stake-item"
+                style={{
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: "8px",
+                  padding: "15px",
+                  marginBottom: "10px",
+                }}
+              >
+                <div className="stake-header" style={{ marginBottom: "10px" }}>
+                  <h4
                     style={{
-                      background: "rgba(255, 255, 255, 0.05)",
-                      border: "1px solid rgba(255, 255, 255, 0.1)",
-                      borderRadius: "8px",
-                      padding: "15px",
+                      margin: "0 0 5px 0",
+                      color: "#fff",
+                      fontSize: "16px",
+                    }}
+                  >
+                    Plan {index + 1} -{" "}
+                    {stakePlan ? Number(formatUnits(stakePlan.apy, 18)) : 80}%
+                    APY
+                  </h4>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "rgba(255, 255, 255, 0.7)",
+                    }}
+                  >
+                    Staked: {formatDate(stake.stakeTime)}
+                  </div>
+                </div>
+
+                <div className="stake-details">
+                  <div
+                    className="detail-row"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: "5px",
+                    }}
+                  >
+                    <span style={{ fontSize: "14px" }}>Staked Amount:</span>
+                    <span style={{ fontSize: "14px", fontWeight: "bold" }}>
+                      {formatUnits(stake.stakedAmount, 18)} DIGI
+                    </span>
+                  </div>
+                  <div
+                    className="detail-row"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: "5px",
+                    }}
+                  >
+                    <span style={{ fontSize: "14px" }}>Invested Amount:</span>
+                    <span style={{ fontSize: "14px" }}>
+                      {formatUnits(stake.investedAmount, 18)} USD
+                    </span>
+                  </div>
+                  <div
+                    className="detail-row"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: "5px",
+                    }}
+                  >
+                    <span style={{ fontSize: "14px" }}>Withdrawn:</span>
+                    <span style={{ fontSize: "14px" }}>
+                      {formatUnits(stake.totalWithdrawnAmount, 18)} DIGI (
+                      {withdrawnPercentage.toFixed(1)}%)
+                    </span>
+                  </div>
+                  <div
+                    className="detail-row"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
                       marginBottom: "10px",
                     }}
                   >
-                    <div
-                      className="stake-header"
-                      style={{ marginBottom: "10px" }}
+                    <span style={{ fontSize: "14px" }}>Withdrawable Now:</span>
+                    <span
+                      style={{
+                        fontSize: "14px",
+                        color: canWithdraw ? "#00ff00" : "#ff6b6b",
+                      }}
                     >
-                      <h4
-                        style={{
-                          margin: "0 0 5px 0",
-                          color: "#fff",
-                          fontSize: "16px",
-                        }}
-                      >
-                        Plan {index + 1} - 80% APY
-                      </h4>
-                      <div
-                        style={{
-                          fontSize: "12px",
-                          color: "rgba(255, 255, 255, 0.7)",
-                        }}
-                      >
-                        Staked: {formatDate(stake.stakeTime)}
-                      </div>
+                      {formatUnits(actualWithdrawable, 18)} DIGI
+                    </span>
+                  </div>
+
+                  {/* Withdrawal Progress Bar */}
+                  <div
+                    className="progress-container"
+                    style={{ marginBottom: "10px" }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        marginBottom: "5px",
+                        color: "rgba(255, 255, 255, 0.7)",
+                      }}
+                    >
+                      Withdrawal Progress: {withdrawnPercentage.toFixed(1)}%
                     </div>
-
-                    <div className="stake-details">
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "6px",
+                        backgroundColor: "rgba(255, 255, 255, 0.1)",
+                        borderRadius: "3px",
+                        overflow: "hidden",
+                      }}
+                    >
                       <div
-                        className="detail-row"
                         style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          marginBottom: "5px",
+                          width: `${withdrawnPercentage}%`,
+                          height: "100%",
+                          backgroundColor:
+                            withdrawnPercentage >= 100 ? "#00ff00" : "#007bff",
+                          transition: "width 0.3s ease",
                         }}
-                      >
-                        <span style={{ fontSize: "14px" }}>Staked Amount:</span>
-                        <span style={{ fontSize: "14px", fontWeight: "bold" }}>
-                          {formatUnits(stake.stakedAmount, 18)} DIGI
-                        </span>
-                      </div>
-                      <div
-                        className="detail-row"
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          marginBottom: "5px",
-                        }}
-                      >
-                        <span style={{ fontSize: "14px" }}>
-                          Invested Amount:
-                        </span>
-                        <span style={{ fontSize: "14px" }}>
-                          {formatUnits(stake.investedAmount, 18)} USD
-                        </span>
-                      </div>
-                      <div
-                        className="detail-row"
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          marginBottom: "5px",
-                        }}
-                      >
-                        <span style={{ fontSize: "14px" }}>Withdrawn:</span>
-                        <span style={{ fontSize: "14px" }}>
-                          {formatUnits(stake.totalWithdrawnAmount, 18)} DIGI (
-                          {withdrawnPercentage.toFixed(1)}%)
-                        </span>
-                      </div>
-                      <div
-                        className="detail-row"
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          marginBottom: "10px",
-                        }}
-                      >
-                        <span style={{ fontSize: "14px" }}>
-                          Withdrawable Now:
-                        </span>
-                        <span
-                          style={{
-                            fontSize: "14px",
-                            color: canWithdraw ? "#00ff00" : "#ff6b6b",
-                          }}
-                        >
-                          {formatUnits(actualWithdrawable, 18)} DIGI
-                        </span>
-                      </div>
-
-                      {/* Withdrawal Progress Bar */}
-                      <div
-                        className="progress-container"
-                        style={{ marginBottom: "10px" }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "12px",
-                            marginBottom: "5px",
-                            color: "rgba(255, 255, 255, 0.7)",
-                          }}
-                        >
-                          Withdrawal Progress: {withdrawnPercentage.toFixed(1)}%
-                        </div>
-                        <div
-                          style={{
-                            width: "100%",
-                            height: "6px",
-                            backgroundColor: "rgba(255, 255, 255, 0.1)",
-                            borderRadius: "3px",
-                            overflow: "hidden",
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: `${withdrawnPercentage}%`,
-                              height: "100%",
-                              backgroundColor:
-                                withdrawnPercentage >= 100
-                                  ? "#00ff00"
-                                  : "#007bff",
-                              transition: "width 0.3s ease",
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Withdraw Button */}
-                      <button
-                        onClick={() => handleWithdrawStake(index)}
-                        disabled={
-                          !canWithdraw || pendingWithdrawIndex === index
-                        }
-                        style={{
-                          width: "100%",
-                          padding: "8px 12px",
-                          backgroundColor: canWithdraw ? "#007bff" : "#6c757d",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "4px",
-                          cursor: canWithdraw ? "pointer" : "not-allowed",
-                          fontSize: "14px",
-                          opacity: canWithdraw ? 1 : 0.6,
-                        }}
-                      >
-                        {pendingWithdrawIndex === index
-                          ? "Withdrawing..."
-                          : canWithdraw
-                          ? `Withdraw ${formatUnits(
-                              actualWithdrawable,
-                              18
-                            )} DIGI`
-                          : "Cannot Withdraw Yet"}
-                      </button>
-
-                      {/* Status message */}
-                      {!canWithdraw && (
-                        <div
-                          style={{
-                            fontSize: "12px",
-                            color: "#ff6b6b",
-                            marginTop: "5px",
-                            textAlign: "center",
-                          }}
-                        >
-                          {stake.stakedAmount <= stake.totalWithdrawnAmount
-                            ? "✅ Fully withdrawn"
-                            : currentTime <
-                              Number(stake.stakeTime) +
-                                Number(stakePlan?.lockDuration || 0)
-                            ? "⏳ Lock period active"
-                            : "⏰ Weekly limit (wait 7 days)"}
-                        </div>
-                      )}
+                      />
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </>
+
+                  {/* Withdraw Button */}
+                  <button
+                    onClick={() => handleWithdrawStake(index)}
+                    disabled={
+                      !canWithdraw ||
+                      pendingWithdrawIndex === index ||
+                      (withdrawalTxHash && isWithdrawalConfirming)
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      backgroundColor: canWithdraw ? "#007bff" : "#6c757d",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: canWithdraw ? "pointer" : "not-allowed",
+                      fontSize: "14px",
+                      opacity: canWithdraw ? 1 : 0.6,
+                    }}
+                  >
+                    {pendingWithdrawIndex === index &&
+                    withdrawalTxHash &&
+                    isWithdrawalConfirming
+                      ? "Confirming..."
+                      : pendingWithdrawIndex === index
+                      ? "Withdrawing..."
+                      : canWithdraw
+                      ? `Withdraw ${formatUnits(actualWithdrawable, 18)} DIGI`
+                      : "Cannot Withdraw Yet"}
+                  </button>
+
+                  {/* Status message */}
+                  {!canWithdraw && (
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "#ff6b6b",
+                        marginTop: "5px",
+                        textAlign: "center",
+                      }}
+                    >
+                      {stake.stakedAmount <= stake.totalWithdrawnAmount
+                        ? "✅ Fully withdrawn"
+                        : currentTime <
+                          Number(stake.stakeTime) +
+                            Number(stakePlan?.lockDuration || 0)
+                        ? "⏳ Lock period active"
+                        : "⏰ Weekly limit (wait 7 days)"}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </UserDataDisplayStyleWrapper>
   );

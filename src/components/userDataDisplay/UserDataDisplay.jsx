@@ -1,5 +1,10 @@
-import { useMemo, useEffect } from "react";
-import { useAccount, useBalance, useReadContract } from "wagmi";
+import { useMemo, useEffect, useState } from "react";
+import {
+  useAccount,
+  useBalance,
+  useReadContract,
+  useReadContracts,
+} from "wagmi";
 import { formatEther, formatUnits } from "viem";
 import { PRESALE_ADDRESS, USDT_ADDRESS } from "../../config/constants";
 import { PRESALE_ABI } from "../../config/presaleAbi";
@@ -10,7 +15,7 @@ const UserDataDisplay = () => {
   const { address, isConnected, chainId } = useAccount();
 
   // 1. Fetch BNB Balance
-  const { data: balanceData, isLoading: isBalanceLoading } = useBalance({
+  const { data: balanceData, refetch: refetchBalance } = useBalance({
     address: address,
     chainId: chainId,
     query: {
@@ -19,39 +24,35 @@ const UserDataDisplay = () => {
   });
 
   // 2. Fetch USDT Balance
-  const { data: usdtBalance, isLoading: isUsdtLoading } = useReadContract({
+  const { data: usdtBalance, refetch: refetchUsdtBalance } = useReadContract({
     address: USDT_ADDRESS,
     abi: IERC20_ABI,
     functionName: "balanceOf",
     args: [address || "0x0000000000000000000000000000000000000000"],
-    chainId: 97,
+    chainId: 56,
     query: {
       enabled: !!address,
     },
   });
 
-  // 2.1. Fetch USDT Decimals
+  // 3. Fetch USDT Decimals
   const { data: usdtDecimals } = useReadContract({
     address: USDT_ADDRESS,
     abi: IERC20_ABI,
     functionName: "decimals",
-    chainId: 97,
+    chainId: 56,
     query: {
       enabled: true,
     },
   });
 
-  // 3. Fetch User Staker Info
-  const {
-    data: stakerInfo,
-    isLoading: isStakerLoading,
-    refetch: refetchStakerInfo,
-  } = useReadContract({
+  // 4. Fetch User Staker Info
+  const { data: stakerInfo, refetch: refetchUserStakeInfo } = useReadContract({
     address: PRESALE_ADDRESS,
     abi: PRESALE_ABI,
     functionName: "getStakerInfo",
     args: [address || "0x0000000000000000000000000000000000000000"],
-    chainId: 97,
+    chainId: 56,
     query: {
       enabled: !!address,
       select: (data) =>
@@ -64,16 +65,24 @@ const UserDataDisplay = () => {
     },
   });
 
-  // Auto-refetch staker info every 10 seconds when connected
+  // Auto-refetch user stake info every 10 seconds when connected
   useEffect(() => {
     if (!isConnected || !address) return;
 
     const interval = setInterval(() => {
-      refetchStakerInfo();
+      refetchUserStakeInfo();
+      refetchBalance();
+      refetchUsdtBalance();
     }, 10000); // Refetch every 10 seconds
 
     return () => clearInterval(interval);
-  }, [isConnected, address, refetchStakerInfo]);
+  }, [
+    isConnected,
+    address,
+    refetchUserStakeInfo,
+    refetchBalance,
+    refetchUsdtBalance,
+  ]);
 
   // Listen for stake confirmation events to trigger immediate refresh
   useEffect(() => {
@@ -82,8 +91,10 @@ const UserDataDisplay = () => {
         "UserDataDisplay - Received stakeConfirmed event:",
         event.detail
       );
-      // Trigger immediate refresh of staker data
-      refetchStakerInfo();
+      // Trigger immediate refresh of all user data
+      refetchUserStakeInfo();
+      refetchBalance();
+      refetchUsdtBalance();
     };
 
     window.addEventListener("stakeConfirmed", handleStakeConfirmed);
@@ -91,31 +102,18 @@ const UserDataDisplay = () => {
     return () => {
       window.removeEventListener("stakeConfirmed", handleStakeConfirmed);
     };
-  }, [refetchStakerInfo]);
+  }, [refetchUserStakeInfo, refetchBalance, refetchUsdtBalance]);
 
-  // 4. Process and Format Data
+  // 5. Process and Format Data
   const processedData = useMemo(() => {
     const bnbBalance = balanceData
       ? parseFloat(formatEther(balanceData.value)).toFixed(4)
       : "0";
 
-    const usdtBalanceFormatted = usdtBalance
-      ? (() => {
-          // Use the actual decimals from the contract, fallback to 6 if not available
-          const decimals = usdtDecimals || 6;
-          const formatted = formatUnits(usdtBalance, decimals);
-          const parsed = parseFloat(formatted);
-
-          // Handle very large numbers
-          if (parsed >= 1000000) {
-            return (parsed / 1000000).toFixed(2) + "M";
-          } else if (parsed >= 1000) {
-            return (parsed / 1000).toFixed(2) + "K";
-          } else {
-            return parsed.toFixed(2);
-          }
-        })()
-      : "0";
+    const usdtBalanceFormatted =
+      usdtBalance && usdtDecimals
+        ? parseFloat(formatUnits(usdtBalance, usdtDecimals)).toFixed(2)
+        : "0";
 
     // Format staker data - handle array format from contract
     // stakerInfo is returned as [referrer, totalStakedAmount, totalInvestedAmount, stakes]
@@ -132,14 +130,13 @@ const UserDataDisplay = () => {
 
     return {
       bnbBalance,
-      usdtBalanceFormatted,
+      usdtBalance: usdtBalanceFormatted,
       totalStaked,
       totalInvested,
+      hasReferrer:
+        stakerInfo?.[0] !== "0x0000000000000000000000000000000000000000",
     };
-  }, [balanceData, stakerInfo, usdtBalance, usdtDecimals]);
-
-  // Handle loading state
-  const isLoading = isBalanceLoading || isStakerLoading || isUsdtLoading;
+  }, [balanceData, usdtBalance, usdtDecimals, stakerInfo]);
 
   // Don't render anything if not connected
   if (!isConnected || !address) {
@@ -148,34 +145,24 @@ const UserDataDisplay = () => {
 
   return (
     <UserDataDisplayStyleWrapper>
-      {isLoading ? (
-        <p className="loading-text">Loading your data...</p>
-      ) : (
-        <>
-          <div className="data-row">
-            <span className="data-label">BNB Balance:</span>
-            <span className="data-value">
-              {processedData.bnbBalance} {balanceData?.symbol || ""}
-            </span>
-          </div>
-          <div className="data-row">
-            <span className="data-label">USDT Balance:</span>
-            <span className="data-value">
-              {processedData.usdtBalanceFormatted} USDT
-            </span>
-          </div>
-          <div className="data-row">
-            <span className="data-label">Total Staked:</span>
-            <span className="data-value">{processedData.totalStaked} DIGI</span>
-          </div>
-          <div className="data-row">
-            <span className="data-label">Total Invested:</span>
-            <span className="data-value">
-              {processedData.totalInvested} USD
-            </span>
-          </div>
-        </>
-      )}
+      <div className="data-row">
+        <span className="data-label">BNB Balance:</span>
+        <span className="data-value">
+          {processedData.bnbBalance} {balanceData?.symbol || ""}
+        </span>
+      </div>
+      <div className="data-row">
+        <span className="data-label">USDT Balance:</span>
+        <span className="data-value">{processedData.usdtBalance} USDT</span>
+      </div>
+      <div className="data-row">
+        <span className="data-label">Total Staked:</span>
+        <span className="data-value">{processedData.totalStaked} DIGI</span>
+      </div>
+      <div className="data-row">
+        <span className="data-label">Total Invested:</span>
+        <span className="data-value">{processedData.totalInvested} USD</span>
+      </div>
     </UserDataDisplayStyleWrapper>
   );
 };

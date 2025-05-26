@@ -18,7 +18,7 @@ const chains = {
     id: 2,
     icon: IconBnb,
     name: "BNB Smart Chain Testnet",
-    chainId: 97,
+    chainId: 56,
     configModule: ConfigModuleBnb,
     payWith: "BNB",
     title: "Buy on BNB",

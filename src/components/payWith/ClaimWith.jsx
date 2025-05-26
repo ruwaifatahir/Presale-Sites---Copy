@@ -1,5 +1,10 @@
 import PayWithStyleWrapper from "./PayWith.style";
-import { useReadContract, useAccount, useWriteContract } from "wagmi";
+import {
+  useReadContract,
+  useAccount,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { PRESALE_ADDRESS } from "../../config/constants";
 import { PRESALE_ABI } from "../../config/presaleAbi";
@@ -13,18 +18,28 @@ import Dropdown from "./Dropdown/Dropdown";
  */
 
 const WITHDRAW_PLAN_OPTIONS = [
-  { label: "Plan 1 - 80% APY", value: 0 },
-  { label: "Plan 2 - 80% APY", value: 1 },
-  { label: "Plan 3 - 80% APY", value: 2 },
+  { label: "Plan 1 - 80% APY, 6 Months", value: 0 },
+  { label: "Plan 2 - 100% APY, 12 Months", value: 1 },
+  { label: "Plan 3 - 120% APY, 24 Months", value: 2 },
 ];
 
 const WithdrawWith = ({ variant }) => {
   const { address, isConnected } = useAccount();
-  const { writeContract, isPending: isWithdrawPending } = useWriteContract();
+  const {
+    writeContract,
+    isPending: isWithdrawPending,
+    data: hash,
+  } = useWriteContract();
   const { openConnectModal } = useConnectModal();
   const [selectedPlan, setSelectedPlan] = useState(
     WITHDRAW_PLAN_OPTIONS[0].value
   );
+
+  // Wait for transaction confirmation
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash,
+    });
 
   // Get user staker info
   const {
@@ -36,12 +51,29 @@ const WithdrawWith = ({ variant }) => {
     abi: PRESALE_ABI,
     functionName: "getStakerInfo",
     args: [address || "0x0000000000000000000000000000000000000000"],
-    chainId: 97,
+    chainId: 56,
     query: {
       enabled: !!address,
       refetchInterval: 15000,
     },
   });
+
+  // Handle withdrawal confirmation
+  useEffect(() => {
+    if (isConfirmed) {
+      // Refetch user data immediately
+      refetchStakerInfo();
+
+      // Emit custom event for other components to refresh
+      window.dispatchEvent(
+        new CustomEvent("withdrawalConfirmed", {
+          detail: { address, planIndex: selectedPlan },
+        })
+      );
+
+      console.log("Withdrawal confirmed - triggering data refresh");
+    }
+  }, [isConfirmed, refetchStakerInfo, address, selectedPlan]);
 
   // Auto-refetch staker info every 10 seconds when connected
   useEffect(() => {
@@ -58,17 +90,20 @@ const WithdrawWith = ({ variant }) => {
   useEffect(() => {
     const handleWithdrawConfirmed = (event) => {
       console.log(
-        "WithdrawWith - Received withdrawConfirmed event:",
+        "WithdrawWith - Received withdrawalConfirmed event:",
         event.detail
       );
       // Trigger immediate refresh of staker data
       refetchStakerInfo();
     };
 
-    window.addEventListener("withdrawConfirmed", handleWithdrawConfirmed);
+    window.addEventListener("withdrawalConfirmed", handleWithdrawConfirmed);
 
     return () => {
-      window.removeEventListener("withdrawConfirmed", handleWithdrawConfirmed);
+      window.removeEventListener(
+        "withdrawalConfirmed",
+        handleWithdrawConfirmed
+      );
     };
   }, [refetchStakerInfo]);
 
@@ -78,7 +113,7 @@ const WithdrawWith = ({ variant }) => {
     abi: PRESALE_ABI,
     functionName: "stakePlans",
     args: [selectedPlan],
-    chainId: 97,
+    chainId: 56,
     query: {
       enabled: true,
     },
@@ -146,32 +181,20 @@ const WithdrawWith = ({ variant }) => {
     };
   }, [stakerInfo, stakePlans, selectedPlan]);
 
-  const handleWithdraw = () => {
+  const handleWithdraw = async () => {
     if (!withdrawalInfo.canWithdraw) return;
 
-    writeContract(
-      {
+    try {
+      await writeContract({
         address: PRESALE_ADDRESS,
         abi: PRESALE_ABI,
         functionName: "withdraw",
         args: [selectedPlan],
-        chainId: 97,
-      },
-      {
-        onSuccess: (hash) => {
-          console.log("Withdrawal transaction submitted:", hash);
-          // Emit custom event for withdrawal confirmation
-          window.dispatchEvent(
-            new CustomEvent("withdrawConfirmed", {
-              detail: { hash, planIndex: selectedPlan },
-            })
-          );
-        },
-        onError: (error) => {
-          console.error("Withdrawal failed:", error);
-        },
-      }
-    );
+        chainId: 56,
+      });
+    } catch (error) {
+      console.error("Withdrawal failed:", error);
+    }
   };
 
   const handleWithdrawButtonClick = () => {
@@ -289,7 +312,8 @@ const WithdrawWith = ({ variant }) => {
                 isConnected
                   ? withdrawalInfo.totalStaked === "0.0" ||
                     !withdrawalInfo.canWithdraw ||
-                    isWithdrawPending
+                    isWithdrawPending ||
+                    isConfirming
                   : false
               }
               onClick={handleWithdrawButtonClick}
@@ -301,6 +325,8 @@ const WithdrawWith = ({ variant }) => {
                 ? "Loading..."
                 : isWithdrawPending
                 ? "Withdrawing..."
+                : isConfirming
+                ? "Confirming Withdrawal..."
                 : withdrawalInfo.totalStaked === "0.0"
                 ? "No Stakes to Withdraw"
                 : withdrawalInfo.canWithdraw
