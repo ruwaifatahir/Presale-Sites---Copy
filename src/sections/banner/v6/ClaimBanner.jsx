@@ -29,7 +29,7 @@ const Banner = () => {
           <div className="col-md-12">
             <div className="mb-20 text-center " style={{ margin: "14px" }}>
               <h1 className="banner-title">
-                {"DIGI TOKEN Withdrawal"} <br /> {"Withdraw Your Staked Tokens"}
+                {"DGFL TOKEN Withdrawal"} <br /> {"Withdraw Your Staked Tokens"}
               </h1>
               <p className="banner-subtitle">
                 Withdraw 10% of your staked tokens weekly after the lock period

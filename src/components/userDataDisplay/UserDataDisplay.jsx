@@ -157,7 +157,7 @@ const UserDataDisplay = () => {
       </div>
       <div className="data-row">
         <span className="data-label">Total Staked:</span>
-        <span className="data-value">{processedData.totalStaked} DIGI</span>
+        <span className="data-value">{processedData.totalStaked} DGFL</span>
       </div>
       <div className="data-row">
         <span className="data-label">Total Invested:</span>

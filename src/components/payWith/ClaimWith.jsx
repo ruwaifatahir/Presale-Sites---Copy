@@ -275,7 +275,7 @@ const WithdrawWith = ({ variant }) => {
                     }}
                   >
                     <span>Total Staked:</span>
-                    <span>{withdrawalInfo.totalStaked} DIGI</span>
+                    <span>{withdrawalInfo.totalStaked} DGFL</span>
                   </div>
                   <div
                     className="info-row"
@@ -286,7 +286,7 @@ const WithdrawWith = ({ variant }) => {
                     }}
                   >
                     <span>Total Withdrawn:</span>
-                    <span>{withdrawalInfo.totalWithdrawn} DIGI</span>
+                    <span>{withdrawalInfo.totalWithdrawn} DGFL</span>
                   </div>
                   <div
                     className="info-row"
@@ -297,7 +297,7 @@ const WithdrawWith = ({ variant }) => {
                     }}
                   >
                     <span>Remaining:</span>
-                    <span>{withdrawalInfo.remainingAmount} DIGI</span>
+                    <span>{withdrawalInfo.remainingAmount} DGFL</span>
                   </div>
                 </>
               )}
@@ -332,7 +332,7 @@ const WithdrawWith = ({ variant }) => {
                 : withdrawalInfo.canWithdraw
                 ? `Withdraw ${Number(withdrawalInfo.withdrawableAmount).toFixed(
                     4
-                  )} DIGI`
+                  )} DGFL`
                 : "Cannot Withdraw Yet"}
             </button>
           </div>

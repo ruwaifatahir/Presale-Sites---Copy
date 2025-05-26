@@ -40,7 +40,7 @@ const Banner = () => {
           <div className="col-md-12">
             <div className="mb-20 text-center">
               <h1 className="banner-title">
-                {"DIGI TOKEN Presale"} <br /> {"New Era of Blockchain"}
+                {"DGFL TOKEN Presale"} <br /> {"New Era of Blockchain"}
               </h1>
               <p className="banner-subtitle">{BannerData.subtitle}</p>
 

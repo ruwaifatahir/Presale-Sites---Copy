@@ -284,7 +284,7 @@ const UserDataDisplayClaim = () => {
       </div>
       <div className="data-row">
         <span className="data-label">Total Staked:</span>
-        <span className="data-value">{processedData.totalStaked} DIGI</span>
+        <span className="data-value">{processedData.totalStaked} DGFL</span>
       </div>
       <div className="data-row">
         <span className="data-label">Total Invested:</span>
@@ -297,13 +297,13 @@ const UserDataDisplayClaim = () => {
       <div className="data-row">
         <span className="data-label">Withdrawable:</span>
         <span className="data-value">
-          {processedData.formattedWithdrawable} DIGI
+          {processedData.formattedWithdrawable} DGFL
         </span>
       </div>
       <div className="data-row">
         <span className="data-label">Total Withdrawn:</span>
         <span className="data-value">
-          {processedData.formattedWithdrawn} DIGI
+          {processedData.formattedWithdrawn} DGFL
         </span>
       </div>
 
@@ -390,7 +390,7 @@ const UserDataDisplayClaim = () => {
                   >
                     <span style={{ fontSize: "14px" }}>Staked Amount:</span>
                     <span style={{ fontSize: "14px", fontWeight: "bold" }}>
-                      {formatUnits(stake.stakedAmount, 18)} DIGI
+                      {formatUnits(stake.stakedAmount, 18)} DGFL
                     </span>
                   </div>
                   <div
@@ -416,7 +416,7 @@ const UserDataDisplayClaim = () => {
                   >
                     <span style={{ fontSize: "14px" }}>Withdrawn:</span>
                     <span style={{ fontSize: "14px" }}>
-                      {formatUnits(stake.totalWithdrawnAmount, 18)} DIGI (
+                      {formatUnits(stake.totalWithdrawnAmount, 18)} DGFL (
                       {withdrawnPercentage.toFixed(1)}%)
                     </span>
                   </div>
@@ -435,7 +435,7 @@ const UserDataDisplayClaim = () => {
                         color: canWithdraw ? "#00ff00" : "#ff6b6b",
                       }}
                     >
-                      {formatUnits(actualWithdrawable, 18)} DIGI
+                      {formatUnits(actualWithdrawable, 18)} DGFL
                     </span>
                   </div>
 
@@ -501,7 +501,7 @@ const UserDataDisplayClaim = () => {
                       : pendingWithdrawIndex === index
                       ? "Withdrawing..."
                       : canWithdraw
-                      ? `Withdraw ${formatUnits(actualWithdrawable, 18)} DIGI`
+                      ? `Withdraw ${formatUnits(actualWithdrawable, 18)} DGFL`
                       : "Cannot Withdraw Yet"}
                   </button>
 

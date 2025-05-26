@@ -25,9 +25,397 @@ import Dropdown from "./Dropdown/Dropdown";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const STAKE_PLAN_OPTIONS = [
-  { label: "Plan 1 - 80% APY, 6 Months (Min: 3000 DIGI)", value: 0 },
-  { label: "Plan 2 - 100% APY, 12 Months (Min: 30,000 DIGI)", value: 1 },
-  { label: "Plan 3 - 120% APY, 24 Months (Min: 300,000 DIGI)", value: 2 },
+  {
+    label: "Plan 1 - 80% APY, 6 Months (Min: 3000 )",
+    shortLabel: "Plan 1 - 80% APY, 6M",
+    value: 0,
+  },
+  {
+    label: "Plan 2 - 100% APY, 12 Months (Min: 30,000 DGFL)",
+    shortLabel: "Plan 2 - 100% APY, 12M",
+    value: 1,
+  },
+  {
+    label: "Plan 3 - 120% APY, 24 Months (Min: 300,000 DGFL)",
+    shortLabel: "Plan 3 - 120% APY, 24M",
+    value: 2,
+  },
+];
+
+const PAYMENT_OPTIONS = [
+  { label: "Pay with BNB", value: "BNB" },
+  { label: "Pay with USDT", value: "USDT" },
+];
+
+const PayWith = ({ variant }) => {
+  const [input, setInput] = useState("");
+  const [selectedStakePlan, setSelectedStakePlan] = useState(
+    STAKE_PLAN_OPTIONS[0].value
+  );
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
+    PAYMENT_OPTIONS[0].value
+  );
+  const [urlReferralAddress, setUrlReferralAddress] = useState(ZERO_ADDRESS);
+  const [isLinkCopied, setIsLinkCopied] = useState(false);
+  const [validationMessage, setValidationMessage] = useState("");
+
+  const { address, isConnected } = useAccount();
+  const {
+    writeContract,
+    isPending: isWritePending,
+  } = useWriteContract();
+  const { openConnectModal } = useConnectModal();
+
+  // Track transaction states
+  const [approvalTxHash, setApprovalTxHash] = useState(null);
+  const [stakeTxHash, setStakeTxHash] = useState(null);
+
+  // Wait for approval transaction
+  const { isLoading: isApprovalConfirming, isSuccess: isApprovalConfirmed } =
+    useWaitForTransactionReceipt({
+      hash: approvalTxHash,
+    });
+
+  // Wait for stake transaction
+  const { isLoading: isStakeConfirming, isSuccess: isStakeConfirmed } =
+    useWaitForTransactionReceipt({
+      hash: stakeTxHash,
+    });
+
+  // Get USDT allowance
+  const { data: usdtAllowance, refetch: refetchAllowance } = useReadContract({
+    address: USDT_ADDRESS,
+    abi: IERC20_ABI,
+    functionName: "allowance",
+    args: [address || ZERO_ADDRESS, PRESALE_ADDRESS],
+    chainId: 56,
+    query: {
+      enabled: !!address && selectedPaymentMethod === "USDT",
+    },
+  });
+
+  // Get USDT decimals to use correct decimal places
+  const { data: usdtDecimals } = useReadContract({
+    address: USDT_ADDRESS,
+    abi: IERC20_ABI,
+    functionName: "decimals",
+    chainId: 56,
+    query: {
+      enabled: selectedPaymentMethod === "USDT",
+    },
+  });
+
+  // Auto-refetch allowance when approval is confirmed
+  useEffect(() => {
+    if (isApprovalConfirmed) {
+      refetchAllowance();
+      setApprovalTxHash(null);
+    }
+  }, [isApprovalConfirmed, refetchAllowance]);
+
+  // Check if user already staked in selected plan
+  const { data: userStakeInfo, refetch: refetchUserStakeInfo } =
+    useReadContract({
+      address: PRESALE_ADDRESS,
+      abi: PRESALE_ABI,
+      functionName: "getStakeInfo",
+      args: [address || ZERO_ADDRESS, selectedStakePlan],
+      chainId: 56,
+      query: {
+        enabled: !!address,
+      },
+    });
+
+  // Reset stake transaction hash when confirmed - moved here after refetchUserStakeInfo is declared
+  useEffect(() => {
+    if (isStakeConfirmed) {
+      setStakeTxHash(null);
+      setInput(""); // Clear input after successful stake
+
+      // Refetch user stake info immediately
+      refetchUserStakeInfo();
+
+      // Emit custom event for other components to refresh
+      window.dispatchEvent(
+        new CustomEvent("stakeConfirmed", {
+          detail: { address, stakePlan: selectedStakePlan },
+        })
+      );
+
+      console.log("Stake confirmed - triggering data refresh");
+    }
+  }, [isStakeConfirmed, refetchUserStakeInfo, address, selectedStakePlan]);
+
+  // Get contract data
+  const contractCalls = [
+    {
+      address: PRESALE_ADDRESS,
+      abi: PRESALE_ABI,
+      functionName: "getTokenPrice",
+      chainId: 56,
+    },
+    {
+      address: PRESALE_ADDRESS,
+      abi: PRESALE_ABI,
+      functionName: "getBnbPrice",
+      chainId: 56,
+    },
+    {
+      address: PRESALE_ADDRESS,
+      abi: PRESALE_ABI,
+      functionName: "stakePlans",
+      args: [selectedStakePlan],
+      chainId: 56,
+    },
+    {
+      address: PRESALE_ADDRESS,
+      abi: PRESALE_ABI,
+      functionName: "HARDCAP",
+      chainId: 56,
+    },
+    {
+      address: PRESALE_ADDRESS,
+      abi: PRESALE_ABI,
+      functionName: "totalInvestedTokens",
+      chainId: 56,
+    },
+  ];
+
+  const { data: contractData, isLoading: isContractDataLoading } =
+    useReadContracts({
+      contracts: contractCalls,
+      query: {
+        enabled: true,
+        retry: 3,
+      },
+    });
+
+  // Extract contract data
+  const tokenPrice = contractData?.[0]?.result || 0n;
+  const bnbPrice = contractData?.[1]?.result || 0n;
+  const stakePlanRaw = contractData?.[2]?.result || {
+    apy: 0n,
+    lockDuration: 0n,
+    minStakeAmount: 0n,
+  };
+  const hardcap = contractData?.[3]?.result || 0n;
+  const totalInvested = contractData?.[4]?.result || 0n;
+
+  // Memoize stakePlan to prevent dependency issues
+  const stakePlan = useMemo(() => stakePlanRaw, [stakePlanRaw]);
+
+  // Calculate tokens to get
+  const tokensToGet = useMemo(() => {
+    if (!input || !tokenPrice || tokenPrice === 0n) return "0";
+
+    try {
+      // Validate input is a valid number string
+      if (isNaN(parseFloat(input)) || parseFloat(input) <= 0) {
+        return "0";
+      }
+
+      if (selectedPaymentMethod === "BNB") {
+        if (!bnbPrice || bnbPrice === 0n) return "0";
+
+        const bnbAmount = parseEther(input);
+        const usdValue = (bnbAmount * bnbPrice) / 100000000n; // bnbPrice is in 8 decimals
+        const tokens = (usdValue * parseEther("1")) / tokenPrice;
+        return formatUnits(tokens, 18);
+      } else {
+        // USDT payment - validate input before parsing
+        if (!usdtDecimals) return "0";
+
+        const usdtAmount = parseUnits(input, usdtDecimals);
+        // Convert USDT to 18 decimals for the contract if needed
+        const usdtAmountIn18Decimals =
+          usdtDecimals === 6
+            ? usdtAmount * 1000000000000n // multiply by 10^12 to convert from 6 to 18 decimals
+            : usdtAmount; // already in 18 decimals
+        const usdValue = usdtAmountIn18Decimals; // USDT is already in 18 decimals
+        const tokens = (usdValue * parseEther("1")) / tokenPrice;
+        return formatUnits(tokens, 18);
+      }
+    } catch (error) {
+      console.error("Error calculating tokens:", error);
+      return "0";
+    }
+  }, [input, tokenPrice, bnbPrice, selectedPaymentMethod, usdtDecimals]);
+
+  // Calculate estimated rewards
+  const rewardsCalculation = useMemo(() => {
+    // Early return if no input
+    if (!input || Number(input) <= 0) {
+      return {
+        totalRewards: "0",
+        weeklyRewards: "0",
+      };
+    }
+
+    // Early return if stake plan data is not loaded yet - handle array format
+    if (
+      !stakePlan ||
+      !Array.isArray(stakePlan) ||
+      stakePlan.length < 3 ||
+      !stakePlan[0] ||
+      !stakePlan[1] ||
+      stakePlan[0] === 0n ||
+      stakePlan[1] === 0n
+    ) {
+      return {
+        totalRewards: "0",
+        weeklyRewards: "0",
+      };
+    }
+
+    try {
+      // Calculate the USD investment amount
+      let investAmountUSD = 0;
+
+      if (selectedPaymentMethod === "BNB") {
+        // For BNB: input amount * BNB price in USD
+        if (!bnbPrice || bnbPrice === 0n) {
+          return { totalRewards: "0", weeklyRewards: "0" };
+        }
+        investAmountUSD =
+          parseFloat(input) * parseFloat(formatUnits(bnbPrice, 8));
+      } else {
+        // For USDT: input amount is already in USD (since USDT ≈ $1)
+        investAmountUSD = parseFloat(input);
+      }
+
+      // Validate investment amount
+      if (investAmountUSD <= 0 || isNaN(investAmountUSD)) {
+        return { totalRewards: "0", weeklyRewards: "0" };
+      }
+
+      // Get APY and lock duration from stake plan array format [apy, lockDuration, minStakeAmount]
+      const apy = parseFloat(formatUnits(stakePlan[0], 18)); // stakePlan[0] is apy
+      const lockDurationSeconds = Number(stakePlan[1]); // stakePlan[1] is lockDuration
+
+      // Special debugging for Plan 2
+      if (selectedStakePlan === 1) {
+        console.log("=== PLAN 2 DEBUG ===");
+        console.log("stakePlan raw:", stakePlan);
+        console.log("apy raw:", stakePlan[0].toString());
+        console.log("lockDuration raw:", stakePlan[1].toString());
+        console.log("apy parsed:", apy);
+        console.log("lockDurationSeconds:", lockDurationSeconds);
+        console.log("investAmountUSD:", investAmountUSD);
+      }
+
+      if (apy <= 0 || isNaN(apy) || lockDurationSeconds <= 0) {
+        return { totalRewards: "0", weeklyRewards: "0" };
+      }
+
+      // Calculate rewards based on actual lock period
+      const lockDurationDays = lockDurationSeconds / (24 * 60 * 60); // Convert seconds to days
+      const annualRewards = (investAmountUSD * apy) / 100; // Full annual rewards based on APY
+      const dailyRewards = annualRewards / 365; // Daily rewards
+      const totalRewards = dailyRewards * lockDurationDays; // Total rewards for the lock period
+      const weeklyRewards = dailyRewards * 7; // Weekly rewards
+
+      // More debugging for Plan 2
+      if (selectedStakePlan === 1) {
+        console.log("lockDurationDays:", lockDurationDays);
+        console.log("annualRewards:", annualRewards);
+        console.log("dailyRewards:", dailyRewards);
+        console.log("totalRewards:", totalRewards);
+        console.log("weeklyRewards:", weeklyRewards);
+      }
+
+      // Ensure clean number formatting - use more robust approach
+      let totalRewardsFormatted, weeklyRewardsFormatted;
+
+      try {
+        // Use parseFloat and toFixed for cleaner formatting
+        const totalRewardsNum = Number.parseFloat(totalRewards);
+        const weeklyRewardsNum = Number.parseFloat(weeklyRewards);
+
+        if (isNaN(totalRewardsNum) || isNaN(weeklyRewardsNum)) {
+          totalRewardsFormatted = "0.00";
+          weeklyRewardsFormatted = "0.00";
+        } else {
+          totalRewardsFormatted = totalRewardsNum.toFixed(2);
+          weeklyRewardsFormatted = weeklyRewardsNum.toFixed(2);
+        }
+      } catch (formatError) {
+        console.error("Error formatting numbers:", formatError);
+        totalRewardsFormatted = "0.00";
+        weeklyRewardsFormatted = "0.00";
+      }
+
+      // Final debugging for Plan 2
+      if (selectedStakePlan === 1) {
+        console.log("totalRewardsFormatted:", totalRewardsFormatted);
+        console.log("weeklyRewardsFormatted:", weeklyRewardsFormatted);
+        console.log(
+          "typeof totalRewardsFormatted:",
+          typeof totalRewardsFormatted
+        );
+        console.log(
+          "typeof weeklyRewardsFormatted:",
+          typeof weeklyRewardsFormatted
+        );
+        console.log("=== END PLAN 2 DEBUG ===");
+      }
+
+      return {
+        totalRewards: totalRewardsFormatted,
+        weeklyRewards: weeklyRewardsFormatted,
+      };
+    } catch (error) {
+      console.error("Error calculating rewards:", error);
+      return {
+        totalRewards: "0",
+        weeklyRewards: "0",
+      };
+    }
+  }, [input, stakePlan, bnbPrice, selectedPaymentMethod, selectedStakePlan]);
+
+  // Debug the final rewards calculation result
+  if (selectedStakePlan === 1) {
+import PayWithStyleWrapper from "./PayWith.style";
+import {
+  useReadContract,
+  useReadContracts,
+  useWriteContract,
+  useAccount,
+  useWaitForTransactionReceipt,
+} from "wagmi";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { PRESALE_ADDRESS, USDT_ADDRESS } from "../../config/constants";
+import { PRESALE_ABI } from "../../config/presaleAbi";
+import { IERC20_ABI } from "../../config/erc20Abi";
+import { useState, useMemo, useEffect } from "react";
+import PropTypes from "prop-types";
+import { formatUnits, parseEther, isAddress, parseUnits } from "viem";
+import Dropdown from "./Dropdown/Dropdown";
+
+/**
+ * Deploy staking token
+ * Deploy presale contract (set staking token, deposit staking tokens, set base price, set owner)
+ * Check getTokenPrice response
+ */
+
+// Define Zero Address
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+const STAKE_PLAN_OPTIONS = [
+  {
+    label: "Plan 1 - 80% APY, 6 Months (Min: 3000 )",
+    shortLabel: "Plan 1 - 80% APY, 6M",
+    value: 0,
+  },
+  {
+    label: "Plan 2 - 100% APY, 12 Months (Min: 30,000 DGFL)",
+    shortLabel: "Plan 2 - 100% APY, 12M",
+    value: 1,
+  },
+  {
+    label: "Plan 3 - 120% APY, 24 Months (Min: 300,000 DGFL)",
+    shortLabel: "Plan 3 - 120% APY, 24M",
+    value: 2,
+  },
 ];
 
 const PAYMENT_OPTIONS = [
@@ -54,12 +442,6 @@ const PayWith = ({ variant }) => {
     isPending: isWritePending,
   } = useWriteContract();
   const { openConnectModal } = useConnectModal();
-
-  // Wait for transaction confirmation
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({
-      hash,
-    });
 
   // Track transaction states
   const [approvalTxHash, setApprovalTxHash] = useState(null);
@@ -466,7 +848,7 @@ const PayWith = ({ variant }) => {
     const minStakeAmount = parseFloat(formatUnits(stakePlan?.[2] || 0n, 18));
 
     if (tokens < minStakeAmount) {
-      setValidationMessage(`Minimum stake amount is ${minStakeAmount} DIGI`);
+      setValidationMessage(`Minimum stake amount is ${minStakeAmount} DGFL`);
       return;
     }
 
@@ -655,7 +1037,7 @@ const PayWith = ({ variant }) => {
     <PayWithStyleWrapper variant={variant}>
       <form onSubmit={(e) => e.preventDefault()}>
         <div className="presale-item mb-30">
-          <div className="presale-item-inner">
+          <div className="presale-item-inner ">
             <label>Select Stake Plan</label>
             <Dropdown
               options={STAKE_PLAN_OPTIONS}
@@ -690,7 +1072,7 @@ const PayWith = ({ variant }) => {
             />
           </div>
           <div className="presale-item-inner">
-            <label>Get Amount (DIGI)</label>
+            <label>Get Amount (DGFL)</label>
             <input
               type="text"
               placeholder="0"
@@ -833,7 +1215,7 @@ const PayWith = ({ variant }) => {
               <span
                 style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.6)" }}
               >
-                Note: Referrers must have staked at least 10,000 DIGI tokens to
+                Note: Referrers must have staked at least 10,000 DGFL tokens to
                 qualify
               </span>
             </p>

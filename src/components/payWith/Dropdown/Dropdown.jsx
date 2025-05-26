@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import DropdownWrapper from "./Dropdown.style";
 
 const Dropdown = ({
@@ -10,6 +10,19 @@ const Dropdown = ({
   placeholder = "Select an option",
 }) => {
   const [isDropdownActive, setIsDropdownActive] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if screen is mobile size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const dropdownHandle = () => {
     setIsDropdownActive(!isDropdownActive);
@@ -19,12 +32,22 @@ const Dropdown = ({
     const selectedOption = options.find(
       (option) => option.value === selectedValue
     );
-    return selectedOption ? selectedOption.label : placeholder;
-  }, [options, selectedValue, placeholder]);
+    if (!selectedOption) return placeholder;
+    
+    // Use shortLabel on mobile if available, otherwise use regular label
+    return isMobile && selectedOption.shortLabel 
+      ? selectedOption.shortLabel 
+      : selectedOption.label;
+  }, [options, selectedValue, placeholder, isMobile]);
 
   const handleSelect = (value) => {
     onSelect(value);
     setIsDropdownActive(false);
+  };
+
+  const getOptionLabel = (option) => {
+    // Use shortLabel on mobile if available, otherwise use regular label
+    return isMobile && option.shortLabel ? option.shortLabel : option.label;
   };
 
   return (
@@ -46,7 +69,7 @@ const Dropdown = ({
                   handleSelect(item.value);
                 }}
               >
-                <span>{item.label}</span>
+                <span>{getOptionLabel(item)}</span>
               </a>
             </li>
           ))}
