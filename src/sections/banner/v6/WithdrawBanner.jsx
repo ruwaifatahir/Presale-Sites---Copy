@@ -1,12 +1,12 @@
 import BannerWrapper from "./Banner.style";
 import SliderData from "../../../assets/data/boxSlider";
 import WithdrawWith from "../../../components/payWith/ClaimWith";
-import UserDataDisplay from "../../../components/userDataDisplay/UserDataDisplay";
+import UserDataDisplayClaim from "../../../components/userDataDisplay/UserDataDisplayClaim";
 import Slider from "react-slick";
 import BannerData from "../../../assets/data/bannerV6";
 import { useAccount } from "wagmi";
 
-const Banner = () => {
+const WithdrawBanner = () => {
   const { isConnected } = useAccount();
 
   var settings = {
@@ -29,11 +29,11 @@ const Banner = () => {
           <div className="col-md-12">
             <div className="mb-20 text-center " style={{ margin: "14px" }}>
               <h1 className="banner-title">
-                {"DIGI TOKEN Withdrawal"} <br /> {"Withdraw Your Staked Tokens"}
+                {"DIGI TOKEN Presale"} <br /> {"Withdraw Your Stakes"}
               </h1>
               <p className="banner-subtitle">
-                Withdraw 10% of your staked tokens weekly after the lock period
-                ends
+                Withdraw your staked tokens weekly (10% per week) after the lock
+                period ends
               </p>
 
               <div className="presale-card-wrapper">
@@ -42,10 +42,10 @@ const Banner = () => {
                     className="  fw-600 text-white text-uppercase text-center"
                     style={{ position: "relative", top: "26px" }}
                   >
-                    💰 Withdraw your staked tokens safely!
+                    💰 Withdraw your staked tokens!
                   </h5>
                   <div className="presale-card-body">
-                    <UserDataDisplay />
+                    <UserDataDisplayClaim />
                     <WithdrawWith variant="v6" />
                   </div>
                 </div>
@@ -77,4 +77,4 @@ const Banner = () => {
   );
 };
 
-export default Banner;
+export default WithdrawBanner;

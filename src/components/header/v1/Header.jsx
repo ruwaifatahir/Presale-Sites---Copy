@@ -64,6 +64,29 @@ const Header = ({ variant }) => {
                   </ul>
                 )}
 
+                {variant === "v6" && (
+                  <ul className="gittu-header-menu">
+                    <li>
+                      <NavLink
+                        to="/"
+                        className={({ isActive }) =>
+                          isActive && location.pathname === "/" ? "active" : ""
+                        }
+                      >
+                        Stake
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink
+                        to="/claim"
+                        className={({ isActive }) => (isActive ? "active" : "")}
+                      >
+                        Withdraw
+                      </NavLink>
+                    </li>
+                  </ul>
+                )}
+
                 <ul className="social-links">
                   <li>
                     <a
@@ -135,7 +158,6 @@ const Header = ({ variant }) => {
                 </ul>
 
                 {/* Add Claim NavLink here, conditionally rendered */}
-                  
 
                 {variant === "v1" && <ConnectWalletButton />}
                 {variant === "v2" && <ConnectWalletButton variant="v2" />}

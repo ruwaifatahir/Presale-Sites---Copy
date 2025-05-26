@@ -1,14 +1,14 @@
 import Layout from "../Layout";
 import Header from "../components/header/v1/Header";
-import ClaimBanner from "../sections/banner/v6/ClaimBanner";
+import WithdrawBanner from "../sections/banner/v6/WithdrawBanner";
 
-const Claim = () => {
+const Withdraw = () => {
   return (
     <Layout pageTitle="DigiToken - Withdraw">
       <Header variant="v6" />
-      <ClaimBanner />
+      <WithdrawBanner />
     </Layout>
   );
 };
 
-export default Claim;
+export default Withdraw;

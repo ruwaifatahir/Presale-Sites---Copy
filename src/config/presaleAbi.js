@@ -2,48 +2,10 @@ export const PRESALE_ABI = [
   {
     inputs: [
       {
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-      {
-        internalType: "uint8",
-        name: "lockOption",
-        type: "uint8",
-      },
-      {
         internalType: "address",
-        name: "referrer",
+        name: "_investToken",
         type: "address",
       },
-    ],
-    name: "buyTokensWithBNB",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "renounceOwnership",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "newOwner",
-        type: "address",
-      },
-    ],
-    name: "transferOwnership",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
       {
         internalType: "address",
         name: "_stakingToken",
@@ -51,7 +13,12 @@ export const PRESALE_ABI = [
       },
       {
         internalType: "address",
-        name: "_usdtToken",
+        name: "_rewardToken",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "_bnbPriceFeed",
         type: "address",
       },
       {
@@ -59,40 +26,83 @@ export const PRESALE_ABI = [
         name: "_baseTokenPrice",
         type: "uint256",
       },
-      {
-        internalType: "uint256",
-        name: "_baseTokenPriceUSDT",
-        type: "uint256",
-      },
-      {
-        internalType: "address",
-        name: "initialOwner",
-        type: "address",
-      },
     ],
     stateMutability: "nonpayable",
     type: "constructor",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "owner",
-        type: "address",
-      },
-    ],
-    name: "OwnableInvalidOwner",
+    inputs: [],
+    name: "ALREADY_STAKE_ERROR",
     type: "error",
   },
   {
-    inputs: [
-      {
-        internalType: "address",
-        name: "account",
-        type: "address",
-      },
-    ],
-    name: "OwnableUnauthorizedAccount",
+    inputs: [],
+    name: "ALREADY_WITHDRAWN_ERROR",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "CIRCULAR_REFERRAL_ERROR",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "HARDCAP_REACHED_ERROR",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "INVALID_ADDRESS_ERROR",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "INVALID_BASE_TOKEN_PRICE_ERROR",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "INVALID_STAKE_PLAN_INDEX_ERROR",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "MIN_STAKE_AMOUNT_ERROR",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "NOT_ENOUGH_DEPOSITED_TOKENS_ERROR",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "NOT_STARTED_ERROR",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "NO_AMOUNT_TO_WITHDRAW_ERROR",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "NO_INVEST_TOKENS_ERROR",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "NO_STAKING_TOKENS_ERROR",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "REFERER_NOT_QUALIFIED_ERROR",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "WITHDRAW_LOCKED_ERROR",
     type: "error",
   },
   {
@@ -100,200 +110,12 @@ export const PRESALE_ABI = [
     inputs: [
       {
         indexed: false,
-        internalType: "uint256[3]",
-        name: "newAPYRanges",
-        type: "uint256[3]",
-      },
-    ],
-    name: "APYUpdated",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
         internalType: "uint256",
-        name: "newBaseTokenPrice",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "newBaseTokenPriceUSDT",
+        name: "withdrawnAmount",
         type: "uint256",
       },
     ],
-    name: "BaseTokenPriceUpdated",
-    type: "event",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-      {
-        internalType: "uint8",
-        name: "lockOption",
-        type: "uint8",
-      },
-      {
-        internalType: "address",
-        name: "referrer",
-        type: "address",
-      },
-    ],
-    name: "buyTokensWithUSDT",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "stakeIndex",
-        type: "uint256",
-      },
-    ],
-    name: "claimRewards",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-    ],
-    name: "emergencyWithdrawBNB",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "token",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-    ],
-    name: "emergencyWithdrawTokens",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-    ],
-    name: "fundContractTokens",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-    ],
-    name: "fundContractUSDT",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "sixMonths",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "oneYear",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "twoYears",
-        type: "uint256",
-      },
-    ],
-    name: "LockPeriodsUpdated",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "newMaxStakeAmount",
-        type: "uint256",
-      },
-    ],
-    name: "MaxStakeAmountUpdated",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "newMinStakeAmount",
-        type: "uint256",
-      },
-    ],
-    name: "MinStakeAmountUpdated",
-    type: "event",
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "newSixMonthsMin",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "newOneYearMin",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "newTwoYearsMin",
-        type: "uint256",
-      },
-    ],
-    name: "MinimumStakeAmountsUpdated",
+    name: "InvestTokensWithdrawn",
     type: "event",
   },
   {
@@ -319,25 +141,49 @@ export const PRESALE_ABI = [
     anonymous: false,
     inputs: [
       {
-        indexed: true,
+        indexed: false,
         internalType: "address",
-        name: "user",
+        name: "account",
         type: "address",
       },
+    ],
+    name: "Paused",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
       {
         indexed: false,
-        internalType: "uint256",
-        name: "amount",
-        type: "uint256",
+        internalType: "uint8",
+        name: "stakePlanIndex",
+        type: "uint8",
       },
       {
+        components: [
+          {
+            internalType: "uint256",
+            name: "apy",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "lockDuration",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "minStakeAmount",
+            type: "uint256",
+          },
+        ],
         indexed: false,
-        internalType: "uint256",
-        name: "stakeIndex",
-        type: "uint256",
+        internalType: "struct PresaleStakingStorage.StakePlan",
+        name: "stakePlan",
+        type: "tuple",
       },
     ],
-    name: "RewardsClaimed",
+    name: "StakePlanUpdated",
     type: "event",
   },
   {
@@ -352,26 +198,20 @@ export const PRESALE_ABI = [
       {
         indexed: false,
         internalType: "uint256",
-        name: "amount",
+        name: "stakedAmount",
         type: "uint256",
       },
       {
         indexed: false,
         internalType: "uint256",
-        name: "lockPeriod",
+        name: "investedAmount",
         type: "uint256",
       },
       {
         indexed: false,
-        internalType: "uint256",
-        name: "stakeIndex",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "address",
-        name: "referrer",
-        type: "address",
+        internalType: "uint8",
+        name: "stakePlanIndex",
+        type: "uint8",
       },
     ],
     name: "Staked",
@@ -383,191 +223,57 @@ export const PRESALE_ABI = [
       {
         indexed: true,
         internalType: "address",
-        name: "referrer",
+        name: "staker",
         type: "address",
       },
       {
         indexed: false,
         internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "level",
+        name: "index",
         type: "uint256",
       },
     ],
-    name: "StakingReferralRewardsDistributed",
+    name: "StakerAdded",
     type: "event",
   },
   {
     anonymous: false,
     inputs: [
       {
-        indexed: true,
-        internalType: "address",
-        name: "buyer",
-        type: "address",
-      },
-      {
         indexed: false,
         internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "totalCost",
+        name: "depositedAmount",
         type: "uint256",
       },
     ],
-    name: "TokensPurchased",
+    name: "StakingTokensDeposited",
     type: "event",
   },
   {
+    anonymous: false,
     inputs: [
       {
-        internalType: "uint256[3]",
-        name: "newAPYRanges",
-        type: "uint256[3]",
-      },
-    ],
-    name: "updateAPY",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
+        indexed: false,
         internalType: "uint256",
-        name: "newSixMonths",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "newOneYear",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "newTwoYears",
+        name: "withdrawnAmount",
         type: "uint256",
       },
     ],
-    name: "updateLockPeriods",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
+    name: "StakingTokensWithdrawn",
+    type: "event",
   },
   {
+    anonymous: false,
     inputs: [
       {
-        internalType: "uint256",
-        name: "newMaxStakeAmount",
-        type: "uint256",
-      },
-    ],
-    name: "updateMaxStakeAmount",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "newSixMonthsMin",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "newOneYearMin",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "newTwoYearsMin",
-        type: "uint256",
-      },
-    ],
-    name: "updateMinimumStakeAmounts",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "newMinStakeAmount",
-        type: "uint256",
-      },
-    ],
-    name: "updateMinStakeAmount",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
+        indexed: false,
         internalType: "address",
-        name: "_stakingToken",
+        name: "account",
         type: "address",
       },
     ],
-    name: "updateStakingToken",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "newBaseTokenPrice",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "newBaseTokenPriceUSDT",
-        type: "uint256",
-      },
-    ],
-    name: "updateTokenPrices",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "_usdtToken",
-        type: "address",
-      },
-    ],
-    name: "updateUSDTToken",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "stakeIndex",
-        type: "uint256",
-      },
-    ],
-    name: "withdraw",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
+    name: "Unpaused",
+    type: "event",
   },
   {
     anonymous: false,
@@ -581,13 +287,7 @@ export const PRESALE_ABI = [
       {
         indexed: false,
         internalType: "uint256",
-        name: "amount",
-        type: "uint256",
-      },
-      {
-        indexed: false,
-        internalType: "uint256",
-        name: "stakeIndex",
+        name: "withdrawnAmount",
         type: "uint256",
       },
     ],
@@ -596,274 +296,12 @@ export const PRESALE_ABI = [
   },
   {
     inputs: [],
-    name: "withdrawStakingReferralRewards",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    stateMutability: "payable",
-    type: "receive",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    name: "apyRanges",
+    name: "HARDCAP",
     outputs: [
       {
         internalType: "uint256",
         name: "",
         type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "baseTokenPrice",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "baseTokenPriceUSDT",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "user",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "stakeIndex",
-        type: "uint256",
-      },
-    ],
-    name: "calculateRewards",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "lockPeriod",
-        type: "uint256",
-      },
-    ],
-    name: "getAPY",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getCurrentTokenPrice",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getCurrentTokenPriceUSDT",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "user",
-        type: "address",
-      },
-    ],
-    name: "getStakingReferrals",
-    outputs: [
-      {
-        internalType: "address[]",
-        name: "",
-        type: "address[]",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "user",
-        type: "address",
-      },
-    ],
-    name: "getUserStakes",
-    outputs: [
-      {
-        components: [
-          {
-            internalType: "uint256",
-            name: "amount",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "stakingStartTime",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "lockPeriod",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "claimedRewards",
-            type: "uint256",
-          },
-          {
-            internalType: "bool",
-            name: "withdrawn",
-            type: "bool",
-          },
-          {
-            internalType: "uint256",
-            name: "lastClaimTime",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "withdrawalStartTime",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "withdrawnPercentage",
-            type: "uint256",
-          },
-          {
-            internalType: "address",
-            name: "referrer",
-            type: "address",
-          },
-        ],
-        internalType: "struct PresaleStaking.Stake[]",
-        name: "",
-        type: "tuple[]",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "maxStakeAmount",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "minStakeAmount",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "oneYear",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "oneYearMinStake",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "owner",
-    outputs: [
-      {
-        internalType: "address",
-        name: "",
-        type: "address",
       },
     ],
     stateMutability: "view",
@@ -896,8 +334,14 @@ export const PRESALE_ABI = [
     type: "function",
   },
   {
-    inputs: [],
-    name: "sixMonths",
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "REFERRER_REWARDS_PERCENT",
     outputs: [
       {
         internalType: "uint256",
@@ -910,7 +354,101 @@ export const PRESALE_ABI = [
   },
   {
     inputs: [],
-    name: "sixMonthsMinStake",
+    name: "baseTokenPrice",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "bnbPriceFeed",
+    outputs: [
+      {
+        internalType: "contract AggregatorV3Interface",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "collectedInvestTokens",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_amount",
+        type: "uint256",
+      },
+    ],
+    name: "depositStakingTokens",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "depositedStakingTokens",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_offset",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "_limit",
+        type: "uint256",
+      },
+    ],
+    name: "distributeRewards",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "success",
+        type: "bool",
+      },
+      {
+        internalType: "uint256",
+        name: "processedCount",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getBnbPrice",
     outputs: [
       {
         internalType: "uint256",
@@ -925,41 +463,31 @@ export const PRESALE_ABI = [
     inputs: [
       {
         internalType: "address",
-        name: "",
+        name: "_staker",
         type: "address",
       },
       {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
+        internalType: "uint8",
+        name: "_stakePlanIndex",
+        type: "uint8",
       },
     ],
-    name: "stakes",
+    name: "getStakeInfo",
     outputs: [
       {
         internalType: "uint256",
-        name: "amount",
+        name: "stakedAmount",
         type: "uint256",
       },
       {
         internalType: "uint256",
-        name: "stakingStartTime",
+        name: "investedAmount",
         type: "uint256",
       },
       {
         internalType: "uint256",
-        name: "lockPeriod",
+        name: "stakeTime",
         type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "claimedRewards",
-        type: "uint256",
-      },
-      {
-        internalType: "bool",
-        name: "withdrawn",
-        type: "bool",
       },
       {
         internalType: "uint256",
@@ -968,32 +496,110 @@ export const PRESALE_ABI = [
       },
       {
         internalType: "uint256",
-        name: "withdrawalStartTime",
+        name: "lastWithdrawalTime",
         type: "uint256",
       },
       {
         internalType: "uint256",
-        name: "withdrawnPercentage",
+        name: "totalWithdrawnAmount",
         type: "uint256",
       },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_staker",
+        type: "address",
+      },
+    ],
+    name: "getStakerInfo",
+    outputs: [
       {
         internalType: "address",
         name: "referrer",
         type: "address",
       },
+      {
+        internalType: "uint256",
+        name: "totalStakedAmount",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "totalInvestedAmount",
+        type: "uint256",
+      },
+      {
+        components: [
+          {
+            internalType: "uint256",
+            name: "stakedAmount",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "investedAmount",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "stakeTime",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "lastClaimTime",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "lastWithdrawalTime",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "totalWithdrawnAmount",
+            type: "uint256",
+          },
+        ],
+        internalType: "struct PresaleStakingStorage.Stake[3]",
+        name: "stakes",
+        type: "tuple[3]",
+      },
     ],
     stateMutability: "view",
     type: "function",
   },
   {
-    inputs: [
+    inputs: [],
+    name: "getStakerStats",
+    outputs: [
       {
         internalType: "uint256",
-        name: "",
+        name: "totalStakers",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "totalInvested",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "totalCollected",
         type: "uint256",
       },
     ],
-    name: "stakingReferralPercentages",
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getStakersCount",
     outputs: [
       {
         internalType: "uint256",
@@ -1005,18 +611,195 @@ export const PRESALE_ABI = [
     type: "function",
   },
   {
-    inputs: [
+    inputs: [],
+    name: "getTokenPrice",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "investToken",
+    outputs: [
+      {
+        internalType: "contract IERC20",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "owner",
+    outputs: [
       {
         internalType: "address",
         name: "",
         type: "address",
       },
     ],
-    name: "stakingReferralRewards",
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "pause",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "paused",
     outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "renounceOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "rewardToken",
+    outputs: [
+      {
+        internalType: "contract IERC20",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint8",
+        name: "_stakePlanIndex",
+        type: "uint8",
+      },
+      {
+        components: [
+          {
+            internalType: "uint256",
+            name: "apy",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "lockDuration",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "minStakeAmount",
+            type: "uint256",
+          },
+        ],
+        internalType: "struct PresaleStakingStorage.StakePlan",
+        name: "_stakePlan",
+        type: "tuple",
+      },
+    ],
+    name: "setStakePlan",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "_amount",
+        type: "uint256",
+      },
+      {
+        internalType: "uint8",
+        name: "_stakePlanIndex",
+        type: "uint8",
+      },
+      {
+        internalType: "address",
+        name: "_referrer",
+        type: "address",
+      },
+    ],
+    name: "stake",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint8",
+        name: "_stakePlanIndex",
+        type: "uint8",
+      },
+      {
+        internalType: "address",
+        name: "_referrer",
+        type: "address",
+      },
+    ],
+    name: "stake",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
       {
         internalType: "uint256",
         name: "",
+        type: "uint256",
+      },
+    ],
+    name: "stakePlans",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "apy",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "lockDuration",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "minStakeAmount",
         type: "uint256",
       },
     ],
@@ -1030,18 +813,23 @@ export const PRESALE_ABI = [
         name: "",
         type: "address",
       },
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
     ],
-    name: "stakingReferrals",
+    name: "stakers",
     outputs: [
       {
         internalType: "address",
-        name: "",
+        name: "referrer",
         type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "totalStakedAmount",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "totalInvestedAmount",
+        type: "uint256",
       },
     ],
     stateMutability: "view",
@@ -1050,12 +838,12 @@ export const PRESALE_ABI = [
   {
     inputs: [
       {
-        internalType: "address",
+        internalType: "uint256",
         name: "",
-        type: "address",
+        type: "uint256",
       },
     ],
-    name: "stakingReferrer",
+    name: "stakersArray",
     outputs: [
       {
         internalType: "address",
@@ -1071,7 +859,7 @@ export const PRESALE_ABI = [
     name: "stakingToken",
     outputs: [
       {
-        internalType: "contract IERC20Extended",
+        internalType: "contract IERC20",
         name: "",
         type: "address",
       },
@@ -1094,7 +882,7 @@ export const PRESALE_ABI = [
   },
   {
     inputs: [],
-    name: "twoYears",
+    name: "totalInvestedTokens",
     outputs: [
       {
         internalType: "uint256",
@@ -1106,42 +894,56 @@ export const PRESALE_ABI = [
     type: "function",
   },
   {
-    inputs: [],
-    name: "twoYearsMinStake",
-    outputs: [
+    inputs: [
       {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "usdtToken",
-    outputs: [
-      {
-        internalType: "contract IERC20Extended",
-        name: "",
+        internalType: "address",
+        name: "newOwner",
         type: "address",
       },
     ],
-    stateMutability: "view",
+    name: "transferOwnership",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
     inputs: [],
-    name: "WEEK",
-    outputs: [
+    name: "unpause",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
       {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
+        internalType: "uint8",
+        name: "_stakePlanIndex",
+        type: "uint8",
       },
     ],
-    stateMutability: "view",
+    name: "withdraw",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "withdrawInvestTokens",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "withdrawStakingTokens",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
 ];
