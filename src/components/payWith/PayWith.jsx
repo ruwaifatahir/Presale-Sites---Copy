@@ -25,7 +25,7 @@ import Dropdown from "./Dropdown/Dropdown";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 const STAKE_PLAN_OPTIONS = [
-  { label: "Plan 1 - 80% APY, 6 Months (Min: 300 DIGI)", value: 0 },
+  { label: "Plan 1 - 80% APY, 6 Months (Min: 3000 DIGI)", value: 0 },
   { label: "Plan 2 - 100% APY, 12 Months (Min: 30,000 DIGI)", value: 1 },
   { label: "Plan 3 - 120% APY, 24 Months (Min: 300,000 DIGI)", value: 2 },
 ];
