@@ -11,6 +11,7 @@ const FooterWrapper = styled.footer`
     display: flex;
     align-items: center;
     gap: 4rem;
+    padding: 0 2rem;
   }
 
   .marquee-item {
@@ -31,7 +32,7 @@ const FooterWrapper = styled.footer`
     }
 
     .footer-image {
-      height: 50px;
+      height: 30px;
     }
   }
 `;
@@ -48,6 +49,7 @@ const Footer = () => {
               className="footer-image"
             />
           </div>
+
           <div className="marquee-item">
             <img
               src="./assets/footer/Digitoken.png"
@@ -55,27 +57,7 @@ const Footer = () => {
               className="footer-image"
             />
           </div>
-          <div className="marquee-item">
-            <img
-              src="./assets/footer/Digifolio.png"
-              alt="Digifolio"
-              className="footer-image"
-            />
-          </div>
-          <div className="marquee-item">
-            <img
-              src="./assets/footer/Blockliz.png"
-              alt="Blockliz"
-              className="footer-image"
-            />
-          </div>
-          <div className="marquee-item">
-            <img
-              src="./assets/footer/Digitoken.png"
-              alt="Digitoken"
-              className="footer-image"
-            />
-          </div>
+
           <div className="marquee-item">
             <img
               src="./assets/footer/Digifolio.png"
@@ -91,10 +73,45 @@ const Footer = () => {
               className="footer-image"
             />
           </div>
+
           <div className="marquee-item">
             <img
               src="./assets/footer/Digitoken.png"
               alt="Digitoken"
+              className="footer-image"
+            />
+          </div>
+
+          <div className="marquee-item">
+            <img
+              src="./assets/footer/Digifolio.png"
+              alt="Digifolio"
+              className="footer-image"
+            />
+          </div>
+
+        
+
+          <div className="marquee-item">
+            <img
+              src="./assets/footer/Blockliz.png"
+              alt="Blockliz"
+              className="footer-image"
+            />
+          </div>
+
+          <div className="marquee-item">
+            <img
+              src="./assets/footer/Digitoken.png"
+              alt="Digitoken"
+              className="footer-image"
+            />
+          </div>
+
+          <div className="marquee-item">
+            <img
+              src="./assets/footer/Digifolio.png"
+              alt="Digifolio"
               className="footer-image"
             />
           </div>

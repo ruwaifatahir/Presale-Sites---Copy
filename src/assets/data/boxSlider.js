@@ -7,14 +7,12 @@ const Data = [
     text: "Presale Live",
   },
   {
-    text: "Price = 0.035",
+    text: "Price = 0.025",
   },
   {
-    text: "Listing = 0.060",
+    text: "80% to 120% APY",
   },
-  {
-    text: "Stage 2",
-  },
+  
   {
     socialLinks: [
       {

@@ -813,8 +813,8 @@ const PayWith = ({ variant }) => {
                     border: "none",
                     background: isLinkCopied
                       ? "linear-gradient(135deg, #28a745, #20c997)"
-                      : "linear-gradient(135deg, #007bff, #0056b3)",
-                    color: "#fff",
+                      : "linear-gradient(90deg, #1dff96 0%, #bcff7b 100%)",
+                    color: "#000",
                     cursor: "pointer",
                     transition: "all 0.3s ease",
                     display: "flex",

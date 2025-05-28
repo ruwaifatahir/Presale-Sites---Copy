@@ -133,11 +133,11 @@ const Banner = () => {
             {SliderData?.map((item, i) => (
               <div key={i} className="slider-item">
                 {item.text && <p>{item.text}</p>}
-                {item.socialLinks?.map((socialLinkItem, sid) => (
+                {/* {item.socialLinks?.map((socialLinkItem, sid) => (
                   <a key={sid} href={socialLinkItem.url}>
                     <img src={socialLinkItem.icon} alt="icon" />
                   </a>
-                ))}
+                ))} */}
               </div>
             ))}
           </Slider>
