@@ -29,9 +29,7 @@ const Data = [
       },
     ],
   },
-  {
-    text: "25% Bonus",
-  },
+  
 ];
 
 export default Data;
