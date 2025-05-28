@@ -289,17 +289,6 @@ const PayWith = ({ variant }) => {
       const apy = parseFloat(formatUnits(stakePlan[0], 18)); // stakePlan[0] is apy
       const lockDurationSeconds = Number(stakePlan[1]); // stakePlan[1] is lockDuration
 
-      // Special debugging for Plan 2
-      if (selectedStakePlan === 1) {
-        console.log("=== PLAN 2 DEBUG ===");
-        console.log("stakePlan raw:", stakePlan);
-        console.log("apy raw:", stakePlan[0].toString());
-        console.log("lockDuration raw:", stakePlan[1].toString());
-        console.log("apy parsed:", apy);
-        console.log("lockDurationSeconds:", lockDurationSeconds);
-        console.log("investAmountUSD:", investAmountUSD);
-      }
-
       if (apy <= 0 || isNaN(apy) || lockDurationSeconds <= 0) {
         return { totalRewards: "0", weeklyRewards: "0" };
       }
@@ -310,15 +299,6 @@ const PayWith = ({ variant }) => {
       const dailyRewards = annualRewards / 365; // Daily rewards
       const totalRewards = dailyRewards * lockDurationDays; // Total rewards for the lock period
       const weeklyRewards = dailyRewards * 7; // Weekly rewards
-
-      // More debugging for Plan 2
-      if (selectedStakePlan === 1) {
-        console.log("lockDurationDays:", lockDurationDays);
-        console.log("annualRewards:", annualRewards);
-        console.log("dailyRewards:", dailyRewards);
-        console.log("totalRewards:", totalRewards);
-        console.log("weeklyRewards:", weeklyRewards);
-      }
 
       // Ensure clean number formatting - use more robust approach
       let totalRewardsFormatted, weeklyRewardsFormatted;
@@ -341,21 +321,6 @@ const PayWith = ({ variant }) => {
         weeklyRewardsFormatted = "0.00";
       }
 
-      // Final debugging for Plan 2
-      if (selectedStakePlan === 1) {
-        console.log("totalRewardsFormatted:", totalRewardsFormatted);
-        console.log("weeklyRewardsFormatted:", weeklyRewardsFormatted);
-        console.log(
-          "typeof totalRewardsFormatted:",
-          typeof totalRewardsFormatted
-        );
-        console.log(
-          "typeof weeklyRewardsFormatted:",
-          typeof weeklyRewardsFormatted
-        );
-        console.log("=== END PLAN 2 DEBUG ===");
-      }
-
       return {
         totalRewards: totalRewardsFormatted,
         weeklyRewards: weeklyRewardsFormatted,
@@ -368,11 +333,6 @@ const PayWith = ({ variant }) => {
       };
     }
   }, [input, stakePlan, bnbPrice, selectedPaymentMethod, selectedStakePlan]);
-
-  // Debug the final rewards calculation result
-  if (selectedStakePlan === 1) {
-    console.log("Final rewardsCalculation for Plan 2:", rewardsCalculation);
-  }
 
   // Create safe values for input fields to prevent any concatenation issues
   const safeTotalRewards = useMemo(() => {
@@ -430,22 +390,6 @@ const PayWith = ({ variant }) => {
     }
     return cleanValue;
   }, [rewardsCalculation?.weeklyRewards]);
-
-  // Additional debugging for Plan 2
-  if (selectedStakePlan === 1) {
-    console.log(
-      "SAFE VALUES - Total:",
-      safeTotalRewards,
-      "Weekly:",
-      safeWeeklyRewards
-    );
-    console.log(
-      "ORIGINAL VALUES - Total:",
-      rewardsCalculation?.totalRewards,
-      "Weekly:",
-      rewardsCalculation?.weeklyRewards
-    );
-  }
 
   // Get referral address from URL
   useEffect(() => {

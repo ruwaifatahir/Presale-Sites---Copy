@@ -52,6 +52,6 @@ const Header = () => {
       {isMobileMenu && <MobileMenu mobileMenuHandle={handleMobileMenu} />}
     </>
   );
-};
+};  
 
 export default Header;

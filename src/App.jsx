@@ -9,7 +9,7 @@ const App = () => {
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<HomeV1 />} />
-        <Route path="/claim" element={<Claim />} />
+        <Route path="/withdraw" element={<Claim />} />
       </Routes>
     </BrowserRouter>
   );
