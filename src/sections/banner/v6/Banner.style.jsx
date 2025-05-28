@@ -10,7 +10,6 @@ const BannerWrapper = styled.section`
   background-size: cover;
   min-height: 100vh;
 
-  
   padding: 223px 0 60px 0;
   position: relative;
   z-index: 0;
@@ -103,7 +102,7 @@ const BannerWrapper = styled.section`
   }
 
   .scroll-slider-wrapper1 {
-    position:  ;
+    position: ;
     z-index: -2 !important;
     bottom: 269px;
     left: 0;
@@ -125,7 +124,7 @@ const BannerWrapper = styled.section`
     }
   }
   .scroll-slider-wrapper {
-    position: absolute ;
+    position: absolute;
     z-index: -2 !important;
     bottom: 269px;
     left: 0;
@@ -146,8 +145,6 @@ const BannerWrapper = styled.section`
       transform: rotate(6deg);
     }
   }
-
-  
 
   .scroll-slider-content {
     width: 100%;
@@ -214,6 +211,45 @@ const BannerWrapper = styled.section`
     }
   }
 
+  .smoothSlider {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2rem;
+    margin-top: 1rem;
+    margin-bottom: 2rem;
+    margin-bottom: 2rem;
+    width: 119%;
+    margin-left: -2rem;
+    background: radial-gradient(
+      circle,
+      rgba(71, 207, 128, 1) 65%,
+      rgba(0, 113, 68, 1) 100%
+    );
+
+    @media screen and (min-width: 768px) {
+      display: none;
+    }
+  }
+
+  .smoothSliderDiv {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .smoothSliderDiv p {
+    color: black;
+    font-weight: 800;
+    font-size: 1.5rem;
+  }
+
+  .smoothSliderImg {
+    width: 30px;
+    height: 30px;
+  }
+
   @media screen and (max-width: 480px) {
     padding: 150px 0 60px 0;
 
@@ -242,13 +278,45 @@ const BannerWrapper = styled.section`
         padding: 20px;
       }
     }
+
+    .smoothSlider {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 2rem;
+      margin-top: 1rem;
+      width: 119%;
+      margin-left: -2rem;
+      background: radial-gradient(
+        circle,
+        rgba(71, 207, 128, 1) 65%,
+        rgba(0, 113, 68, 1) 100%
+      );
+    }
+
+    .smoothSliderDiv {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .smoothSliderDiv p {
+      color: black;
+      font-weight: 800;
+      font-size: 1.5rem;
+    }
+
+    .smoothSliderImg {
+      width: 30px;
+      height: 30px;
+    }
   }
-      .kycImage {
+  .kycImage {
     width: 35rem;
     transition-duration: 0.1s;
     transition-timing-function: ease-in-out;
   }
-    
 `;
 
 export default BannerWrapper;

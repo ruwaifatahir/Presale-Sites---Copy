@@ -8,10 +8,10 @@ import Slider from "react-slick";
 import BannerData from "../../../assets/data/bannerV6";
 import { usePresaleData } from "../../../utils/PresaleContext";
 import { useAccount } from "wagmi";
-
+import Marquee from "react-fast-marquee";
+import IconImg from "../../../assets/images/icons/star-square.svg";
 const Banner = () => {
-  const { currentStage, currentBonus, raisedToken, goalToken, tokenPercent } =
-    usePresaleData();
+  const { tokenPercent } = usePresaleData();
   const { isConnected } = useAccount();
 
   // Calculate the end date for the countdown (30 days from now)
@@ -19,6 +19,10 @@ const Banner = () => {
   const nowInSeconds = Math.floor(Date.now() / 1000);
   const thirtyDaysInSeconds = 30 * 24 * 60 * 60;
   const calculatedEndDate = nowInSeconds + thirtyDaysInSeconds;
+
+
+
+  
 
   var settings = {
     dots: false,
@@ -58,6 +62,43 @@ const Banner = () => {
                 </a>
               </div>
 
+              <Marquee
+                autoFill
+                pauseOnHover
+                pauseOnClick
+                className="smoothSlider"
+              >
+                <div className="smoothSliderDiv">
+                  <p>Presale Live</p>
+                  <img src={IconImg} className="smoothSliderImg" />
+                  <p>Price = {0.025}$</p>
+                  <img src={IconImg} className="smoothSliderImg" />
+                  <p>Stage {Number(0) + 1}</p>
+                  <img src={IconImg} className="smoothSliderImg" />
+
+                  <p>Presale Live</p>
+                  <img src={IconImg} className="smoothSliderImg" />
+                  <p>Price = {0.025}$</p>
+                  <img src={IconImg} className="smoothSliderImg" />
+                  <p>Stage {Number(0) + 1}</p>
+                  <img src={IconImg} className="smoothSliderImg" />
+
+                  <p>Presale Live</p>
+                  <img src={IconImg} className="smoothSliderImg" />
+                  <p>Price = {0.025}$</p>
+                  <img src={IconImg} className="smoothSliderImg" />
+                  <p>Stage {Number(0) + 1}</p>
+                  <img src={IconImg} className="smoothSliderImg" />
+
+                  <p>Presale Live</p>
+                  <img src={IconImg} className="smoothSliderImg" />
+                  <p>Price = {0.025}$</p>
+                  <img src={IconImg} className="smoothSliderImg" />
+                  <p>Stage {Number(0) + 1}</p>
+                  <img src={IconImg} className="smoothSliderImg" />
+                </div>
+              </Marquee>
+
               <div className="presale-card-wrapper">
                 <div className="presale-card">
                   <div className="presale-card-header">
@@ -86,7 +127,7 @@ const Banner = () => {
         </div>
       </div>
 
-      <div className="scroll-slider-wrapper">
+      <div className="scroll-slider-wrapper d-none d-md-block">
         <div className="scroll-slider-content">
           <Slider {...settings} className="gittu-slider">
             {SliderData?.map((item, i) => (

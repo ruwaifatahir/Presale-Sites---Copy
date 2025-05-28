@@ -1,9 +1,10 @@
 import { Helmet, HelmetProvider } from "react-helmet-async";
+import Footer from "./components/footer/Footer";
 
 const Layout = ({ pageTitle, children }) => {
   return (
     <HelmetProvider>
-      <Helmet> 
+      <Helmet>
         {/* title tag */}
         {pageTitle ? <title>{pageTitle}</title> : <title>DigiToken</title>}
 
@@ -15,7 +16,7 @@ const Layout = ({ pageTitle, children }) => {
 
         {/* All font family included here */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com"  />
+        <link rel="preconnect" href="https://fonts.gstatic.com" />
         {/* Inter font family */}
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
@@ -43,6 +44,7 @@ const Layout = ({ pageTitle, children }) => {
         />
       </Helmet>
       {children}
+      <Footer />
     </HelmetProvider>
   );
 };
