@@ -50,7 +50,7 @@ const MobileMenu = ({ mobileMenuHandle }) => {
         <ul className="mobile-social-links mb-40">
           <li>
             <a
-              href="https://discord.com/invite/vxPeNFSx"
+              href="https://discord.com/invite/btUZGySJws"
               target="_blank"
               rel="noreferrer"
             >
@@ -59,18 +59,13 @@ const MobileMenu = ({ mobileMenuHandle }) => {
           </li>
 
           <li>
-            <a href="https://x.com/DigifolioX" target="_blank" rel="noreferrer">
-              <img src={Twitter} alt="icon" />
-            </a>
-          </li>
-
-          <li>
             <a
-              href="https://www.reddit.com/r/Digifolios/?rdt=61480"
+              href="https://x.com/DigifoliosX
+"
               target="_blank"
               rel="noreferrer"
             >
-              <img src={reddit} alt="icon" />
+              <img src={Twitter} alt="icon" />
             </a>
           </li>
 

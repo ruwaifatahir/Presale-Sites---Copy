@@ -67,7 +67,7 @@ const Header = ({ variant }) => {
                 <ul className="social-links">
                   <li>
                     <a
-                      href="https://discord.gg/vxPeNFSx"
+                      href="https://discord.com/invite/btUZGySJws "
                       target="_blank"
                       rel="noreferrer"
                     >
@@ -76,22 +76,14 @@ const Header = ({ variant }) => {
                   </li>
                   <li>
                     <a
-                      href="https://twitter.com/DigifolioX"
+                      href="https://x.com/DigifoliosX"
                       target="_blank"
                       rel="noreferrer"
                     >
                       <img src={Twitter} alt="icon" />
                     </a>
                   </li>
-                  <li>
-                    <a
-                      href="https://www.reddit.com/r/Digifolios/"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <img src={reddit} alt="icon" />
-                    </a>
-                  </li>
+
                   <li>
                     <a
                       href="https://www.instagram.com/digifolios/"
