@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useState } from "react";
 import CountdownWrapper from "./Countdown.style";
 
-const Countdown = ({ endDate, ...props }) => {
+const Countdown = ({ ...props }) => {
   const [remainingTime, setRemainingTime] = useState({
     seconds: "00",
     minutes: "00",
@@ -11,29 +11,26 @@ const Countdown = ({ endDate, ...props }) => {
   });
 
   useEffect(() => {
+    // Fixed end time - same for everyone (set to a specific future date)
+    // Change this date to when you want the presale to end
+    const endTime = new Date("2025-09-05T23:59:59").getTime(); // March 15, 2025
+
     const calculateTimeLeft = () => {
-      const now = Date.now();
-      const difference = endDate * 1000 - now;
+      const difference = endTime - Date.now();
 
       let timeLeft = {};
 
       if (difference > 0) {
+        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
+        const minutes = Math.floor((difference / 1000 / 60) % 60);
+        const seconds = Math.floor((difference / 1000) % 60);
+
         timeLeft = {
-          days: String(Math.floor(difference / (1000 * 60 * 60 * 24))).padStart(
-            2,
-            "0"
-          ),
-          hours: String(
-            Math.floor((difference / (1000 * 60 * 60)) % 24)
-          ).padStart(2, "0"),
-          minutes: String(Math.floor((difference / 1000 / 60) % 60)).padStart(
-            2,
-            "0"
-          ),
-          seconds: String(Math.floor((difference / 1000) % 60)).padStart(
-            2,
-            "0"
-          ),
+          days: String(days).padStart(2, "0"),
+          hours: String(hours).padStart(2, "0"),
+          minutes: String(minutes).padStart(2, "0"),
+          seconds: String(seconds).padStart(2, "0"),
         };
       } else {
         timeLeft = { days: "00", hours: "00", minutes: "00", seconds: "00" };
@@ -49,7 +46,7 @@ const Countdown = ({ endDate, ...props }) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [endDate]);
+  }, []);
 
   return (
     <CountdownWrapper {...props}>
